@@ -46,38 +46,28 @@ lig, names_lig, types_lig=init_lig_mol2(ligname)
 N_at_lig=len(lig[:,0])
 N_S=len(names_core[names_core=='S'])
 d_CS=1.83 #Angstroms (wikipedia)
-
-def get_COM(xyz, objeto_COM):
-    return np.average(xyz[names_core==objeto_COM,:], axis=0)
-def get_new_C(C_of_mass, xyz_s, dist):
-    COM_S=np.subtract(xyz_s, C_of_mass)
-    mag_COM_S=np.linalg.norm(COM_S)
-    const=((mag_COM_S+dist)/mag_COM_S)**0.5
-    new_C=C_of_mass+const*COM_S
+def center_COM(xyz, name_core, objeto_COM):
+    COM=np.average(xyz[name_core==objeto_COM,:], axis=0)
+    for i in range(len(xyz[:,0])):
+        xyz[i,:]=xyz[i,:]-COM
+    return xyz
+def get_new_C(xyz_s, dist):
+    mag_S=np.linalg.norm(xyz_s)
+    const=(mag_S+dist)/mag_S
+    new_C=const*xyz_s
     return new_C
-def get_rot_matrix(a, b):
-    matrix=np.identity(3)
-    v=np.cross(a,b)
-    s=np.linalg.norm(v)
-    c=np.dot(a,b)
-    vx=np.array([[0, -v[2], v[1]],[v[2], 0, -v[0]],[-v[1], v[0], 0]])
-    vx_2=np.dot(vx, vx)
-    factor=(1-c)/s**2
-    matrix=matrix+vx+vx_2*factor
-    return normalize(matrix)
-def place_ligands(C_of_mass, xyz_core, xyz_lig, terminal_ndx):
+def place_ligands(xyz_core, xyz_lig, terminal_ndx):
     N_at_lig_tot=N_at_lig*N_S
     xyz_S=xyz_core[np.where(names_core=='S')[0],:]
     new_ligs=np.zeros((N_at_lig_tot, 3))
+    old_C=lig[terminal_ndx,:]
     for i in range(N_S):
-        old_C=lig[terminal_ndx,:]
-        new_C=get_new_C(C_of_mass, xyz_S[i,:], d_CS)
-
-        rot_matrix=get_rot_matrix(old_C, new_C)
-        deltas=np.subtract(old_C,new_C)
+        new_C=get_new_C(xyz_S[i,:], d_CS)
+        deltas=np.subtract(new_C, old_C)
+        print
+        print(np.linalg.norm(new_C-xyz_S[i,:]))
         for j in range(N_at_lig):
             new_ligs[i*N_at_lig+j,:]=lig[j,:]+deltas
-            new_ligs[i*N_at_lig+j,:]=np.dot(rot_matrix,lig[j,:])
     return new_ligs
 def print_NP_pdb(name_lig, name_core, xyz_ligs, xyz_core, type_lig, filename):
     output=open(filename, "w")
@@ -90,7 +80,7 @@ def print_NP_pdb(name_lig, name_core, xyz_ligs, xyz_core, type_lig, filename):
         res+=1
         for j in range(N_at_lig):
             at+=1
-            write_pdb_block(name_lig[j], res_name, xyz_ligs[i*N_S+j,:], res, at, filename)
+            write_pdb_block(name_lig[j], res_name, xyz_ligs[i*N_at_lig+j,:], res, at, filename)
     output.close()
 def write_pdb_block(atname, resname, xyz, resnum, atnum, file_name):
     xyz=np.round(xyz, decimals=4)
@@ -105,6 +95,6 @@ def write_pdb_block(atname, resname, xyz, resnum, atnum, file_name):
     coords.write(str(xyz[2]).rjust(8)+"\n")
     coords.close()
 
-COM=get_COM(core, 'Au')
-ligands=place_ligands(COM, core, lig, 0)
-print_NP_pdb(names_lig, names_core, ligands, core, types_lig, outname)
+centered_core=center_COM(core, names_core, 'Au')
+ligands=place_ligands(centered_core, lig, 0)
+print_NP_pdb(names_lig, names_core, ligands, centered_core, types_lig, outname)
