@@ -1,18 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from optparse import OptionParser
-from sklearn.preprocessing import normalize
+from transformations import affine_matrix_from_points, superimposition_matrix
+
 
 parser=OptionParser()
 parser.add_option("-o", "--output", action="store", type='string', dest="OutputFile", default='Au144L1-60.xyz', help="Name of the output file")
 parser.add_option("-c", "--core", action="store", type='string', dest="CoreFile", default='Au144_MD6341surface1.xyz', help="Name of the xyz core file (includes S)")
 parser.add_option("-l", "--ligand", action="store", type='string', dest="LigandFile", default='ligand.mol2', help="Name of the mol2 uncapped ligand file")
 parser.add_option("-r", "--resname", action="store", type='string', dest="ResidueName", default='UNK', help="3-letter name of the coating ligand")
+parser.add_option("-a", "--anchor", action="append", dest="AnchorIndexes", default=[], help="Indexes (starting from 0) of the atoms that will be aligned to the COM-S vector")
 (options, args)= parser.parse_args()
 outname_opt=options.OutputFile
 corename_opt=options.CoreFile
 ligname_opt=options.LigandFile
 res_name_opt=options.ResidueName
+anchor_ndx=np.array(list(map(int, options.AnchorIndexes[0].split(','))))
 
 def init_lig_mol2(ligand_fname):
     lig_file=np.genfromtxt(ligand_fname, delimiter='\n', dtype='str')
@@ -45,56 +48,49 @@ xyz_core, names_core=init_core_xyz(corename_opt)
 
 N_at_lig=len(xyz_lig[:,0])
 N_S=len(names_core[names_core=='S'])
+N_anchors=len(anchor_ndx)
 d_CS=1.83 #Angstroms (wikipedia)
 
-ar_const=np.zeros(N_S)
-ar_mag=np.zeros(N_S)
-ar_s=np.zeros((N_S,3))
-ar_new=np.zeros((N_S,3))
 def center_COM(xyz_obj_func, names_core_func, objeto_COM):
     COM=np.average(xyz_obj_func[names_core_func==objeto_COM,:], axis=0)
     for i in range(len(xyz_obj_func[:,0])):
         xyz_obj_func[i,:]=xyz_obj_func[i,:]-COM
     return xyz_obj_func
 
-def get_new_linker(xyz_S_func, dist):
-    mag_S=np.linalg.norm(xyz_S_func)
-    const=(mag_S+dist)/mag_S
-    new_linker_tmp=const*xyz_S_func
-    return const, mag_S, xyz_S_func, new_linker_tmp
+def get_new_anchors(xyz_S_tmp, xyz_lig_tmp, dist, anchor_ndx_tmp):
+    new_anchors_tmp=np.zeros((N_anchors,3))
+    for i in range (N_anchors):
+        mag_S=np.linalg.norm(xyz_S_tmp)
+        if i==0:
+            const=(mag_S+dist)/mag_S
+            new_anchors_tmp[i,:]=const*xyz_S_tmp
+        else:
+            rel_dist=np.linalg.norm(xyz_lig_tmp[anchor_ndx_tmp[i],:]-xyz_lig_tmp[anchor_ndx_tmp[i-1],:])
+            const=(mag_S+dist+rel_dist)/mag_S
+            new_anchors_tmp[i,:]=const*xyz_S_tmp
+    return new_anchors_tmp
 
-def place_linker(xyz_core_func, names_core_func, xyz_lig_func, terminal_ndx, objeto_link):
+def place_anchors(xyz_core_func, names_core_func, xyz_lig_func, objeto_link, anchor_ndx_func):
     xyz_S_func=xyz_core_func[np.where(names_core_func==objeto_link)[0],:]
-    new_linkers_func=np.zeros((N_S, 3))
-    old_linker_func=xyz_lig_func[terminal_ndx,:]
+    N_tot_anchors=N_anchors*N_S
+    new_anchors_func=np.zeros((N_tot_anchors, 3))
+    old_anchors_func=xyz_lig_func[anchor_ndx_func,:]
     for i in range(N_S):
-        ar_const[i], ar_mag[i], ar_s[i], ar_new[i]=get_new_linker(xyz_S_func[i,:], d_CS)
-        new_linker_func=ar_new[i]
-        new_linkers_func[i]=new_linker_func
+        new_anchors_func[i*N_anchors:(i+1)*N_anchors,:]=get_new_anchors(xyz_S_func[i,:], xyz_lig_func, d_CS, anchor_ndx_func)
+    return old_anchors_func, new_anchors_func
 
-    """fig=plt.figure()
-    plt.subplot(2,2,1)
-    plt.title('constants')
-    plt.plot(ar_const)
-    plt.subplot(2,2,2)
-    plt.title('mag_S')
-    plt.plot(ar_mag)
-    plt.subplot(2,2,3)
-    plt.title('s position')
-    plt.plot(ar_s)
-    plt.subplot(2,2,4)
-    plt.title('new_C')
-    plt.plot(ar_new)
-    plt.show()"""
-    return new_linkers_func
-
-def place_coating(linked_NP_func, xyz_lig_func):
+def place_coating(new_anchors_func, xyz_lig_func, anchor_ndx_func):
+    old_anchors_func=xyz_lig_func[anchor_ndx_func,:]
     N_lig_tot=N_at_lig*N_S
     coating_func=np.zeros((N_lig_tot,3))
     for i in range(N_S):
-        coating_func[i*N_at_lig]=linked_NP_func[i]
+        trans_matrix=affine_matrix_from_points(old_anchors_func, new_anchors_func[i*N_anchors:(i+1)*N_anchors,:], shear=False, scale=False)
         for j in range(N_at_lig):
-            coating_func[i*N_at_lig+j]=xyz_lig_func[j]
+            if j in anchor_ndx_func:
+                coating_func[i*N_at_lig+j]=new_anchors_func[i*N_anchors+np.where(anchor_ndx_func==j)[0][0],:]
+            else:
+                victime_vec=np.append(xyz_lig_func[j,:],1)
+                coating_func[i*N_at_lig+j]=np.dot(trans_matrix, victime_vec)[0:3]
     return coating_func
 
 
@@ -126,6 +122,6 @@ def write_pdb_block(atname_func, res_name_func, xyz_func, resnum, atnum, out_fil
     coords.close()
 
 centered_core=center_COM(xyz_core, names_core, 'Au')
-linkers=place_linker(centered_core, names_core, xyz_lig, 0, 'S')
-ligands=place_coating(linkers, xyz_lig)
+old_anchors, new_anchors=place_anchors(centered_core, names_core, xyz_lig, 'S', anchor_ndx)
+ligands=place_coating(new_anchors, xyz_lig, anchor_ndx)
 print_NP_pdb(names_lig, names_core, ligands, centered_core, types_lig, outname_opt)
