@@ -1,10 +1,10 @@
-class atom:
-    def __init__(self, name, resnum, restype):
-        name=self.names
-        resnum=self.resnum
-        restype=self.restype
+class Residue:
+    def __init__(self, number, type, gold_atoms, sulphur_atoms):
+        self.restype=type
+        self.resnum=number
+        self.au_atoms=gold_atoms
+        self.s_atoms=sulphur_atoms
+        self.N_atoms=len(self.s_atoms)+len(self.au_atoms)
 
-class residue:
-    def __init__(self, resnum, restype):
-        restype=self.restype
-        resnum=self.resnum
+    def change_type(self, new_type):
+        self.restype=new_type
