@@ -32,6 +32,18 @@ def init_element(grofile_func, element):
         elem_names_func.append(elem_actual[2])
     return np.array(elem_xyz_func)*10, ini+1
 
+def init_topology(topfile_func):
+    names_file_func=np.genfromtxt(topfile_func, delimiter='\n', dtype='str')
+    for i in range(len(names_file_func)):
+        if "[ atoms ]" in names_file_func[i]:
+            ini=i+2
+        elif "[ bonds ]" in names_file_func[i]:
+            fin=i
+    names_all_func=[]
+    for i in range(ini, fin):
+        names_all_func.append(names_file_func[i].split()[4])
+    return names_all_func
+
 def calculate_angles(pa, pb, pc):
     N_angles=len(pa[:,0])
     ab=np.subtract(pb, pa)
@@ -52,7 +64,6 @@ def calculate_distance(pa, pb, pc):
     return dist_func
 
 def print_staple_pdb(residues_list, AU_xyz_func, ST_xyz_func, out_fname):
-    output=open(out_fname, "w")
     at=0
     for i in range(len(residues_list)):
         res_act=residues_list[i]
@@ -62,6 +73,8 @@ def print_staple_pdb(residues_list, AU_xyz_func, ST_xyz_func, out_fname):
         for j in range(len(res_act.au_atoms)):
             at+=1
             write_pdb_block('AU', res_act.restype, AU_xyz_func[res_act.au_atoms[j],:], res_act.resnum, at, out_fname)
+    output=open(out_fname, 'a')
+    output.write('END')
     output.close()
 
 def write_pdb_block(atname_func, res_name_func, xyz_func, resnum, atnum, out_filename):
@@ -77,13 +90,29 @@ def write_pdb_block(atname_func, res_name_func, xyz_func, resnum, atnum, out_fil
     coords.write(str(xyz_func[2]).rjust(8)+"\n")
     coords.close()
 
-def print_xyz(coordenadas, nombres, fnombre):
-    output=open(fnombre, "w")
-    output.write(str(len(nombres)) + "\n \n")
-    for i in range(len(nombres)):
-        output.write(str(nombres[i]) + " " + str(coordenadas[i,0]) + " " + str(coordenadas[i,1]) + " " + str(coordenadas[i,2]) + "\n")
-    output.close()
+def print_new_bonds():
+    return 0
 
+def print_new_angles():
+    return 0
+
+def print_new_dihedrals():
+    return 0
+
+def write_topology(topfile_func, res_list, AU_ini_at_fun, ST_ini_at_func, names_all_func):
+    top_file_func=np.genfromtxt(topfile_func, delimiter='\n', dtype='str')
+    for i in range(len(top_file_func)):
+        #print(top_file_func[i])
+        if ";   ai     aj funct   r             k" in top_file_func[i]:
+            print_new_bonds(res_list, AU_ini_at_fun, ST_ini_at_func)
+        if ";   ai     aj     ak    funct   theta         cth" in top_file_func[i]:
+            print_new_angles()
+            print(i)
+        if ";    i      j      k      l   func   phase     kd      pn" in top_file_func[i]:
+            print_new_dihedrals()
+            print(i)
+
+names_all=init_topology(topfile_opt)
 AU_xyz, AU_ini_at=init_element(grofile_opt, 'AU')
 ST_xyz, ST_ini_at=init_element(grofile_opt, 'ST')
 N_AU=len(AU_xyz)
@@ -136,4 +165,5 @@ for i in range(len(new_residues)):
         elif np.any(angles_tmp)<=110 and np.any(angles_tmp) >90.8:
             new_residues[i].change_type('STV')
 
-print_staple_pdb(new_residues, AU_xyz, ST_xyz, 'test.pdb')
+#print_staple_pdb(new_residues, AU_xyz, ST_xyz, 'test.pdb')
+write_topology(topfile_opt, new_residues, AU_xyz, ST_xyz, names_all)
