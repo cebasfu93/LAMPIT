@@ -4,6 +4,7 @@ from optparse import OptionParser
 from scipy.spatial import distance
 import atom
 import matplotlib.pyplot as plt
+import os
 
 #Declaration of the flags to run the script
 parser=OptionParser()
@@ -120,7 +121,7 @@ def print_new_bonds(res_list_tmp, all_mins_tmp, mins_anchor_tmp, bonds_file_func
                     zero_value=0.241
                 else:
                     print('WTF')
-                bonds_func.write(str(real_s_ndx).rjust(5)+str(real_au_ndx).rjust(7)+str(function_type).rjust(4)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_au_ndx-1]+" m\n")
+                bonds_func.write(str(real_s_ndx).rjust(6)+str(real_au_ndx).rjust(7)+str(function_type).rjust(4)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_au_ndx-1]+" m\n")
 
     for res_act in res_list_tmp:
         for j in range(len(res_act.s_atoms)):
@@ -136,35 +137,110 @@ def print_new_bonds(res_list_tmp, all_mins_tmp, mins_anchor_tmp, bonds_file_func
                 zero_value=0.184
             else:
                 print('Missing parameters')
-            bonds_func.write(str(real_s_ndx).rjust(5)+str(real_anchor_ndx).rjust(7)+str(function_type).rjust(4)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" m\n")
+            bonds_func.write(str(real_s_ndx).rjust(6)+str(real_anchor_ndx).rjust(7)+str(function_type).rjust(4)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" m\n")
     bonds_func.close()
 
-def print_new_angles():
+def print_new_angles(res_list_tmp, all_mins_tmp, mins_anchor_tmp, angles_file_func, names_all_func, types_all_func):
     #Prints the angles with staple atoms present
-    
+    angles_func=open(angles_file_func, "w")
+    function_type=str(1)
+    for res_act in res_list_tmp:
+        for j in range(len(res_act.s_atoms)):
+            s_atom_act=res_act.s_atoms[j]
+            real_s_ndx=np.where(names_all_func=='ST')[0][s_atom_act]+1
+            C1_ndx=mins_anchor_tmp[s_atom_act]
+            real_anchor_ndx=np.where(names_all_func=='C1')[0][C1_ndx]+1
+
+            au_ndx1=all_mins_tmp[s_atom_act,0]
+            au_ndx2=all_mins_tmp[s_atom_act,1]
+            neigh_count_au1=res_act.au_n_bonds[np.where(res_act.au_atoms==au_ndx1)]
+            neigh_count_au2=res_act.au_n_bonds[np.where(res_act.au_atoms==au_ndx2)]
+            real_au_ndx1=np.where(names_all_func=='AU')[0][au_ndx1]+1
+            real_au_ndx2=np.where(names_all_func=='AU')[0][au_ndx2]+1
+
+            #Au-S-AU angles
+            if (neigh_count_au1==2) and (neigh_count_au2==2):
+                if res_act.restype == 'STC':
+                    cons_value=460.240
+                    zero_value=100.0
+                elif res_act.restype == 'STV':
+                    cons_value=1460.240
+                    zero_value=119.2
+            elif (((neigh_count_au1==1) and (neigh_count_au2==2)) or ((neigh_count_au1==2) and (neigh_count_au2==1))):
+                cons_value=460.240
+                zero_value=91.3
+            elif ((neigh_count_au1==1) and (neigh_count_au2==1)):
+                print('There are unparametrized STP residues')
+            angles_func.write(str(real_au_ndx1).rjust(6)+str(real_s_ndx).rjust(7)+str(real_au_ndx2).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_au_ndx1-1]+" - "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_au_ndx2-1]+" m\n")
+
+            #S-AU-S angles
+            if (neigh_count_au1==2):
+                s_atoms_angle=np.where(all_mins_tmp==au_ndx1)[0]
+                real_s_ndx1=np.where(names_all_func=='ST')[0][s_atoms_angle[0]]+1
+                real_s_ndx2=np.where(names_all_func=='ST')[0][s_atoms_angle[1]]+1
+                cons_value=460.240
+                zero_value=172.4
+                angles_func.write(str(real_s_ndx1).rjust(6)+str(real_au_ndx1).rjust(7)+str(real_s_ndx2).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx1-1]+" - "+names_all_func[real_au_ndx1-1]+" - "+names_all_func[real_s_ndx2-1]+" m\n")
+
+                #AU_Lig-S-C
+                cons_value=146.370
+                zero_value=106.8
+                angles_func.write(str(real_au_ndx1).rjust(6)+str(real_s_ndx).rjust(7)+str(real_anchor_ndx).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_au_ndx1-1]+" - "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" m\n")
+
+            if (neigh_count_au2==2):
+                s_atoms_angle=np.where(all_mins_tmp==au_ndx2)[0]
+                real_s_ndx1=np.where(names_all_func=='ST')[0][s_atoms_angle[0]]+1
+                real_s_ndx2=np.where(names_all_func=='ST')[0][s_atoms_angle[1]]+1
+                cons_value=460.240
+                zero_value=172.4
+                angles_func.write(str(real_s_ndx1).rjust(6)+str(real_au_ndx2).rjust(7)+str(real_s_ndx2).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx1-1]+" - "+names_all_func[real_au_ndx2-1]+" - "+names_all_func[real_s_ndx2-1]+" m\n")
+
+                #AU_Lig-S-C
+                cons_value=146.370
+                zero_value=106.8
+                angles_func.write(str(real_au_ndx2).rjust(6)+str(real_s_ndx).rjust(7)+str(real_anchor_ndx).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_au_ndx2-1]+" - "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" m\n")
+
+            elif (neigh_count_au1==1):
+                cons_value=146.370
+                zero_value=111.6
+                angles_func.write(str(real_au_ndx1).rjust(6)+str(real_s_ndx).rjust(7)+str(real_anchor_ndx).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_au_ndx1-1]+" - "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" m\n")
+            elif (neigh_count_au2==1):
+                cons_value=146.370
+                zero_value=111.6
+                angles_func.write(str(real_au_ndx2).rjust(6)+str(real_s_ndx).rjust(7)+str(real_anchor_ndx).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_au_ndx2-1]+" - "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" m\n")
+    angles_func.close()
     return 0
 
 def print_new_dihedrals():
     #Prints the proper dihedrals with staple atoms present
     return 0
 
-"""def write_topology(topfile_func, res_list, AU_ini_at_func, ST_ini_at_func, all_mins_func, new_top_name_func):
-    #Prints the complete topology of the system with the new parameters
-    top_file_func=np.genfromtxt(topfile_func, delimiter='\n', dtype='str')
-    names_all_func, types_all_func=init_topology(topfile_func)
-    new_top_file_func=open(new_top_name_func, 'w')
-    for i in range(len(top_file_func)):
-        new_top_file_func.write(top_file_func[i]+"\n")
-        if ";   ai     aj funct   r             k" in top_file_func[i]:
-            print_new_bonds(res_list, AU_ini_at_func, ST_ini_at_func, all_mins_func, new_top_file_func)
+def write_topology(top_file_func, bonds_file_func, angles_file_func):
 
-        if ";   ai     aj     ak    funct   theta         cth" in top_file_func[i]:
-            print_new_angles()
-            print(i)
-        if ";    i      j      k      l   func   phase     kd      pn" in top_file_func[i]:
-            print_new_dihedrals()
-            print(i)
-    new_top_file_func.close()"""
+    top_file = open(top_file_func, "r")
+    cont_top_file = top_file.readlines()
+    top_file.close()
+
+    final_top=open(top_file_func, "w")
+    final_top.close()
+    final_top=open(top_file_func, "a")
+
+    for i in range(len(cont_top_file)):
+        final_top.writelines(cont_top_file[i])
+        if ";   ai     aj funct   r             k" in cont_top_file[i]:
+            bonds_file=open(bonds_file_func,"r")
+            bonds_contents=bonds_file.readlines()
+            bonds_file.close()
+            for j in range(len(bonds_contents)):
+                final_top.writelines(bonds_contents[j])
+        if ";   ai     aj     ak    funct   theta         cth" in cont_top_file[i]:
+            angles_file=open(angles_file_func,"r")
+            angles_contents=angles_file.readlines()
+            angles_file.close()
+            for j in range(len(angles_contents)):
+                final_top.writelines(angles_contents[j])
+
+    print('Topology file properly modified :)')
 
 #Initializes names, types, coordinates, and number of atoms
 names_all, types_all=init_topology(topfile_opt)
@@ -239,7 +315,9 @@ for i in range(len(new_residues)):
         elif np.any(angles_tmp)<=110 and np.any(angles_tmp) >90.8:
             new_residues[i].change_type('STV')
 
-#print_staple_pdb(new_residues, AU_xyz, ST_xyz, 'test.pdb')
-#write_topology(topfile_opt, new_residues, AU_ini_at, ST_ini_at, names_all, 'test.top')
-
+print_staple_pdb(new_residues, AU_xyz, ST_xyz, 'staples.pdb')
 print_new_bonds(new_residues, all_mins, min_anchor, 'bonds.top', names_all, types_all)
+print_new_angles(new_residues, all_mins, min_anchor, 'angles.top', names_all, types_all)
+write_topology(topfile_opt, 'bonds.top', 'angles.top')
+os.remove('bonds.top')
+os.remove('angles.top')
