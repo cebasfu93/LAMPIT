@@ -119,11 +119,9 @@ def print_NP_pdb(xyz_coated_func, names_coated_func, names_lig_func, out_fname):
         if names_coated_func[i]=='AU':
             res+=1
             write_pdb_block(names_coated_func[i], 'AU', xyz_coated_func[i,:], res, at, out_fname)
-
         elif names_coated_func[i]=='ST':
             res+=1
             write_pdb_block(names_coated_func[i], 'ST', xyz_coated_func[i,:], res, at, out_fname)
-
         else:
             if(names_coated_func[i]==names_lig_func[anchor_ndx[0]]):
                 res+=1
