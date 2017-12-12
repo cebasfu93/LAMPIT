@@ -22,21 +22,20 @@ def init_element(grofile_func, element):
     ini=0
     fin=0
     N_elem_func=0
+    ndx_element=[]
     for i in range(len(elem_file_func)):
-        if element in elem_file_func[i] and first:
-            ini=i
-            first=False
-        if element not in elem_file_func[i] and not first:
-            fin=i
-            break
-    N_elem_func=fin-ini
+        line=elem_file_func[i].split()
+        if element in line:
+            N_elem_func+=1
+            ndx_element.append(i)
     elem_xyz_func=np.zeros((N_elem_func,3))
     elem_names_func=[]
-    for i in range(N_elem_func):
-        elem_actual=elem_file_func[ini+i].split()
+    for i in range(len(ndx_element)):
+        elem_actual=elem_file_func[ndx_element[i]].split()
         elem_xyz_func[i,:]=elem_actual[4:7]
         elem_names_func.append(elem_actual[2])
-    return np.array(elem_xyz_func)*10, ini+1
+
+    return np.array(elem_xyz_func)*10
 
 def init_topology(topfile_func):
     #Returns two lists with all the names and types of the atoms in the system in the same order as in the gro fiel
@@ -48,11 +47,10 @@ def init_topology(topfile_func):
             fin=i
     names_all_func=[]
     types_all_func=[]
-    print (names_file_func[ini])
     for i in range(ini, fin):
         names_all_func.append(names_file_func[i].split()[4])
         types_all_func.append(names_file_func[i].split()[1])
-    return names_all_func, types_all_func
+    return np.array(names_all_func), np.array(types_all_func)
 
 def calculate_angles(pa, pb, pc):
     #Given 3 arrays Nx3, it returns an Nx1 array with the angle made by pa[i], pb[i], and pc[i], centered in pa[i]
@@ -104,17 +102,17 @@ def write_pdb_block(atname_func, res_name_func, xyz_func, resnum, atnum, out_fil
     coords.write(str(xyz_func[2]).rjust(8)+"\n")
     coords.close()
 
-def print_new_bonds(res_list_tmp, AU_ini_at_tmp, ST_ini_at_tmp, all_mins_tmp, bonds_file_func, names_all_func):
+def print_new_bonds(res_list_tmp, all_mins_tmp, mins_anchor_tmp, bonds_file_func, names_all_func, types_all_func):
     #Prints the bonds with staple atoms
     bonds_func=open(bonds_file_func, 'w')
     function_type=str(1)
     for res_act in res_list_tmp:
         for j in range(len(res_act.s_atoms)):
             s_atom_act=res_act.s_atoms[j]
-            real_s_ndx=s_atom_act+ST_ini_at_tmp
+            real_s_ndx=np.where(names_all_func=='ST')[0][s_atom_act]+1
             for k in range(2):
                 au_ndx = all_mins_tmp[s_atom_act,k]
-                real_au_ndx=au_ndx+AU_ini_at_tmp
+                real_au_ndx=np.where(names_all_func=='AU')[0][au_ndx]+1
                 cons_value=62730
                 if res_act.au_n_bonds[np.where(res_act.au_atoms==au_ndx)]==2:
                     zero_value=0.233
@@ -123,10 +121,27 @@ def print_new_bonds(res_list_tmp, AU_ini_at_tmp, ST_ini_at_tmp, all_mins_tmp, bo
                 else:
                     print('WTF')
                 bonds_func.write(str(real_s_ndx).rjust(5)+str(real_au_ndx).rjust(7)+str(function_type).rjust(4)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_au_ndx-1]+" m\n")
+
+    for res_act in res_list_tmp:
+        for j in range(len(res_act.s_atoms)):
+            s_atom_act=res_act.s_atoms[j]
+            real_s_ndx=np.where(names_all_func=='ST')[0][s_atom_act]+1
+            C1_ndx=mins_anchor_tmp[s_atom_act]
+            real_anchor_ndx=np.where(names_all_func=='C1')[0][C1_ndx]+1
+            if types_all_func[np.where(names_all_func=='C1')[0][C1_ndx]]=='CA':
+                cons_value=198321.6
+                zero_value=0.175
+            elif types_all_func[np.where(names_all_func=='C1')[0][C1_ndx]]=='CT':
+                cons_value=99113.0
+                zero_value=0.184
+            else:
+                print('Missing parameters')
+            bonds_func.write(str(real_s_ndx).rjust(5)+str(real_anchor_ndx).rjust(7)+str(function_type).rjust(4)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" m\n")
     bonds_func.close()
 
 def print_new_angles():
     #Prints the angles with staple atoms present
+    
     return 0
 
 def print_new_dihedrals():
@@ -153,20 +168,27 @@ def print_new_dihedrals():
 
 #Initializes names, types, coordinates, and number of atoms
 names_all, types_all=init_topology(topfile_opt)
-AU_xyz, AU_ini_at=init_element(grofile_opt, 'AU')
-ST_xyz, ST_ini_at=init_element(grofile_opt, 'ST')
+AU_xyz=init_element(grofile_opt, 'AU')
+ST_xyz=init_element(grofile_opt, 'ST')
+C1_xyz=init_element(grofile_opt, 'C1')
 N_AU=len(AU_xyz)
 N_ST=len(ST_xyz)
+N_C1=len(C1_xyz)
 
-#Calculates distance between all STs and all AUs
+#Calculates distance between all STs and all AUs, and STs and C1s
 matrix_AU_ST=distance.cdist(ST_xyz, AU_xyz, 'euclidean')
+matrix_C1_ST=distance.cdist(ST_xyz, C1_xyz, 'euclidean')
 
 #Gets indexes of 2 closest AU atoms to each ST, also saving the unique indexes and number of times each unique index appears
 all_mins=np.zeros((N_ST,2))
+min_anchor=np.zeros(N_ST)
 for i in range(N_ST):
     mins_ndx=matrix_AU_ST[i].argsort()[:2]
     all_mins[i,:]=mins_ndx
+    mins_anchor_ndx=matrix_C1_ST[i].argsort()[0]
+    min_anchor[i]=mins_anchor_ndx
 all_mins=all_mins.astype('int')
+min_anchor=min_anchor.astype('int')
 unique_mins, counts_mins=np.unique(all_mins, return_counts=True)
 unique_mins=unique_mins.astype('int')
 
@@ -219,4 +241,5 @@ for i in range(len(new_residues)):
 
 #print_staple_pdb(new_residues, AU_xyz, ST_xyz, 'test.pdb')
 #write_topology(topfile_opt, new_residues, AU_ini_at, ST_ini_at, names_all, 'test.top')
-print_new_bonds(new_residues, AU_ini_at, ST_ini_at, all_mins, 'bonds.top', names_all)
+
+print_new_bonds(new_residues, all_mins, min_anchor, 'bonds.top', names_all, types_all)
