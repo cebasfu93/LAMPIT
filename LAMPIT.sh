@@ -61,3 +61,6 @@ mv ${SYS_NAME}_GMX.top ${SYS_NAME}/${SYS_NAME}.top
 
 #Remove files that ABSOLUTELY unnecessary
 rm -rf em.mdp md.mdp leap.log ANTECHAMBER.FRCMOD
+
+#Modifies topology file to include bonds and angles involving staple atoms
+python3.6 ${DEPENDS}/staples_topology.py -p ${SYS_NAME}/$SYS_NAME.top -x ${SYS_NAME}/$SYS_NAME.gro -a C1

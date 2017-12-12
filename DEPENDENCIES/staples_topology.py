@@ -11,17 +11,16 @@ parser=OptionParser()
 parser.add_option("-x", "--gro", action="store", type='string', dest="GroFile", default='NP1.gro', help="Name of the .gro file with the staples")
 parser.add_option("-p", "--top", action="store", type='string', dest="TopFile", default='NP1.top', help="Name of the .top file associated to the file in -x")
 parser.add_option("-a", "--anchor", action="store", type='string', dest="AnchorName", default='C1', help="Name of the ligands' atom linked to the staple")
+parser.add_option("-f", "--folder", action="store", type='string', dest="WorkDir", default='NP1', help="Path of the working directory to save intermediate files")
 (options, args)= parser.parse_args()
 grofile_opt=options.GroFile
 topfile_opt=options.TopFile
 anchorname_opt=options.AnchorName
+workdir_opt=options.WorkDir
 
 def init_element(grofile_func, element):
     #Returns the xyz coordinates of the atoms with name 'element'
     elem_file_func=np.genfromtxt(grofile_func, delimiter='\n', dtype='str', skip_header=2)
-    first=True
-    ini=0
-    fin=0
     N_elem_func=0
     ndx_element=[]
     for i in range(len(elem_file_func)):
@@ -103,7 +102,7 @@ def write_pdb_block(atname_func, res_name_func, xyz_func, resnum, atnum, out_fil
     coords.write(str(xyz_func[2]).rjust(8)+"\n")
     coords.close()
 
-def print_new_bonds(res_list_tmp, all_mins_tmp, mins_anchor_tmp, bonds_file_func, names_all_func, types_all_func):
+def print_new_bonds(res_list_tmp, all_mins_tmp, mins_anchor_tmp, bonds_file_func, names_all_func, types_all_func, anch_name):
     #Prints the bonds with staple atoms
     bonds_func=open(bonds_file_func, 'w')
     function_type=str(1)
@@ -127,12 +126,12 @@ def print_new_bonds(res_list_tmp, all_mins_tmp, mins_anchor_tmp, bonds_file_func
         for j in range(len(res_act.s_atoms)):
             s_atom_act=res_act.s_atoms[j]
             real_s_ndx=np.where(names_all_func=='ST')[0][s_atom_act]+1
-            C1_ndx=mins_anchor_tmp[s_atom_act]
-            real_anchor_ndx=np.where(names_all_func=='C1')[0][C1_ndx]+1
-            if types_all_func[np.where(names_all_func=='C1')[0][C1_ndx]]=='CA':
+            anch_ndx=mins_anchor_tmp[s_atom_act]
+            real_anchor_ndx=np.where(names_all_func==anch_name)[0][anch_ndx]+1
+            if types_all_func[np.where(names_all_func==anch_name)[0][anch_ndx]]=='CA':
                 cons_value=198321.6
                 zero_value=0.175
-            elif types_all_func[np.where(names_all_func=='C1')[0][C1_ndx]]=='CT':
+            elif types_all_func[np.where(names_all_func==anch_name)[0][anch_ndx]]=='CT':
                 cons_value=99113.0
                 zero_value=0.184
             else:
@@ -140,7 +139,7 @@ def print_new_bonds(res_list_tmp, all_mins_tmp, mins_anchor_tmp, bonds_file_func
             bonds_func.write(str(real_s_ndx).rjust(6)+str(real_anchor_ndx).rjust(7)+str(function_type).rjust(4)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" m\n")
     bonds_func.close()
 
-def print_new_angles(res_list_tmp, all_mins_tmp, mins_anchor_tmp, angles_file_func, names_all_func, types_all_func):
+def print_new_angles(res_list_tmp, all_mins_tmp, mins_anchor_tmp, angles_file_func, names_all_func, types_all_func, anch_name):
     #Prints the angles with staple atoms present
     angles_func=open(angles_file_func, "w")
     function_type=str(1)
@@ -148,8 +147,8 @@ def print_new_angles(res_list_tmp, all_mins_tmp, mins_anchor_tmp, angles_file_fu
         for j in range(len(res_act.s_atoms)):
             s_atom_act=res_act.s_atoms[j]
             real_s_ndx=np.where(names_all_func=='ST')[0][s_atom_act]+1
-            C1_ndx=mins_anchor_tmp[s_atom_act]
-            real_anchor_ndx=np.where(names_all_func=='C1')[0][C1_ndx]+1
+            anch_ndx=mins_anchor_tmp[s_atom_act]
+            real_anchor_ndx=np.where(names_all_func==anch_name)[0][anch_ndx]+1
 
             au_ndx1=all_mins_tmp[s_atom_act,0]
             au_ndx2=all_mins_tmp[s_atom_act,1]
@@ -240,20 +239,18 @@ def write_topology(top_file_func, bonds_file_func, angles_file_func):
             for j in range(len(angles_contents)):
                 final_top.writelines(angles_contents[j])
 
-    print('Topology file properly modified :)')
-
 #Initializes names, types, coordinates, and number of atoms
 names_all, types_all=init_topology(topfile_opt)
 AU_xyz=init_element(grofile_opt, 'AU')
 ST_xyz=init_element(grofile_opt, 'ST')
-C1_xyz=init_element(grofile_opt, 'C1')
+anchor_xyz=init_element(grofile_opt, anchorname_opt)
 N_AU=len(AU_xyz)
 N_ST=len(ST_xyz)
-N_C1=len(C1_xyz)
+N_anchor=len(anchor_xyz)
 
 #Calculates distance between all STs and all AUs, and STs and C1s
 matrix_AU_ST=distance.cdist(ST_xyz, AU_xyz, 'euclidean')
-matrix_C1_ST=distance.cdist(ST_xyz, C1_xyz, 'euclidean')
+matrix_anchor_ST=distance.cdist(ST_xyz, anchor_xyz, 'euclidean')
 
 #Gets indexes of 2 closest AU atoms to each ST, also saving the unique indexes and number of times each unique index appears
 all_mins=np.zeros((N_ST,2))
@@ -261,7 +258,7 @@ min_anchor=np.zeros(N_ST)
 for i in range(N_ST):
     mins_ndx=matrix_AU_ST[i].argsort()[:2]
     all_mins[i,:]=mins_ndx
-    mins_anchor_ndx=matrix_C1_ST[i].argsort()[0]
+    mins_anchor_ndx=matrix_anchor_ST[i].argsort()[0]
     min_anchor[i]=mins_anchor_ndx
 all_mins=all_mins.astype('int')
 min_anchor=min_anchor.astype('int')
@@ -311,13 +308,11 @@ for i in range(len(new_residues)):
     elif ns==3 and nau==4:
         angles_tmp=ang_AU_ST_AU[new_residues[i].s_atoms]
         if np.any(angles_tmp)<128.4 and np.any(angles_tmp) >110:
-            new_residues[i].change_type('STC')
-        elif np.any(angles_tmp)<=110 and np.any(angles_tmp) >90.8:
             new_residues[i].change_type('STV')
+        elif np.any(angles_tmp)<=110 and np.any(angles_tmp) >90.8:
+            new_residues[i].change_type('STC')
 
-print_staple_pdb(new_residues, AU_xyz, ST_xyz, 'staples.pdb')
-print_new_bonds(new_residues, all_mins, min_anchor, 'bonds.top', names_all, types_all)
-print_new_angles(new_residues, all_mins, min_anchor, 'angles.top', names_all, types_all)
-write_topology(topfile_opt, 'bonds.top', 'angles.top')
-os.remove('bonds.top')
-os.remove('angles.top')
+print_staple_pdb(new_residues, AU_xyz, ST_xyz, workdir_opt+'/staples.pdb')
+print_new_bonds(new_residues, all_mins, min_anchor, workdir_opt+'/bonds.top', names_all, types_all, anchorname_opt)
+print_new_angles(new_residues, all_mins, min_anchor, workdir_opt+'/angles.top', names_all, types_all, anchorname_opt)
+write_topology(topfile_opt, workdir_opt+'bonds.top', workdir_opt+'/angles.top')
