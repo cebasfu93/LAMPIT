@@ -9,9 +9,11 @@ import matplotlib.pyplot as plt
 parser=OptionParser()
 parser.add_option("-x", "--gro", action="store", type='string', dest="GroFile", default='NP1.gro', help="Name of the .gro file with the staples")
 parser.add_option("-p", "--top", action="store", type='string', dest="TopFile", default='NP1.top', help="Name of the .top file associated to the file in -x")
+parser.add_option("-a", "--anchor", action="store", type='string', dest="AnchorName", default='C1', help="Name of the ligands' atom linked to the staple")
 (options, args)= parser.parse_args()
 grofile_opt=options.GroFile
 topfile_opt=options.TopFile
+anchorname_opt=options.AnchorName
 
 def init_element(grofile_func, element):
     #Returns the xyz coordinates of the atoms with name 'element'
@@ -46,9 +48,10 @@ def init_topology(topfile_func):
             fin=i
     names_all_func=[]
     types_all_func=[]
+    print (names_file_func[ini])
     for i in range(ini, fin):
         names_all_func.append(names_file_func[i].split()[4])
-        types_all_func.append(types_file_func[i].split()[1])
+        types_all_func.append(names_file_func[i].split()[1])
     return names_all_func, types_all_func
 
 def calculate_angles(pa, pb, pc):
@@ -77,12 +80,12 @@ def print_staple_pdb(residues_list, AU_xyz_func, ST_xyz_func, out_fname):
     at=0
     for i in range(len(residues_list)):
         res_act=residues_list[i]
-        for j in range(len(res_act.s_atoms)):
-            at+=1
-            write_pdb_block('ST', res_act.restype, ST_xyz_func[res_act.s_atoms[j],:], res_act.resnum, at, out_fname)
         for j in range(len(res_act.au_atoms)):
             at+=1
             write_pdb_block('AU', res_act.restype, AU_xyz_func[res_act.au_atoms[j],:], res_act.resnum, at, out_fname)
+        for j in range(len(res_act.s_atoms)):
+            at+=1
+            write_pdb_block('ST', res_act.restype, ST_xyz_func[res_act.s_atoms[j],:], res_act.resnum, at, out_fname)
     output=open(out_fname, 'a')
     output.write('END')
     output.close()
@@ -101,33 +104,52 @@ def write_pdb_block(atname_func, res_name_func, xyz_func, resnum, atnum, out_fil
     coords.write(str(xyz_func[2]).rjust(8)+"\n")
     coords.close()
 
-def print_new_bonds(res_list_tmp, AU_ini_at_tmp, ST_ini_at_tmp):
+def print_new_bonds(res_list_tmp, AU_ini_at_tmp, ST_ini_at_tmp, all_mins_tmp, bonds_file_func, names_all_func):
+    #Prints the bonds with staple atoms
+    bonds_func=open(bonds_file_func, 'w')
+    function_type=str(1)
+    for res_act in res_list_tmp:
+        for j in range(len(res_act.s_atoms)):
+            s_atom_act=res_act.s_atoms[j]
+            real_s_ndx=s_atom_act+ST_ini_at_tmp
+            for k in range(2):
+                au_ndx = all_mins_tmp[s_atom_act,k]
+                real_au_ndx=au_ndx+AU_ini_at_tmp
+                cons_value=62730
+                if res_act.au_n_bonds[np.where(res_act.au_atoms==au_ndx)]==2:
+                    zero_value=0.233
+                elif res_act.au_n_bonds[np.where(res_act.au_atoms==au_ndx)]==1:
+                    zero_value=0.241
+                else:
+                    print('WTF')
+                bonds_func.write(str(real_s_ndx).rjust(5)+str(real_au_ndx).rjust(7)+str(function_type).rjust(4)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_au_ndx-1]+" m\n")
+    bonds_func.close()
 
-    return 0
-    #Prints the staple-staple and staple-ligand bonds
-    return 0
 def print_new_angles():
     #Prints the angles with staple atoms present
     return 0
 
 def print_new_dihedrals():
-    return 0
     #Prints the proper dihedrals with staple atoms present
     return 0
 
-def write_topology(topfile_func, res_list, AU_ini_at_func, ST_ini_at_func, names_all_func):
+"""def write_topology(topfile_func, res_list, AU_ini_at_func, ST_ini_at_func, all_mins_func, new_top_name_func):
     #Prints the complete topology of the system with the new parameters
     top_file_func=np.genfromtxt(topfile_func, delimiter='\n', dtype='str')
+    names_all_func, types_all_func=init_topology(topfile_func)
+    new_top_file_func=open(new_top_name_func, 'w')
     for i in range(len(top_file_func)):
-        #print(top_file_func[i])
+        new_top_file_func.write(top_file_func[i]+"\n")
         if ";   ai     aj funct   r             k" in top_file_func[i]:
-            print_new_bonds(res_list, AU_ini_at_func, ST_ini_at_func)
+            print_new_bonds(res_list, AU_ini_at_func, ST_ini_at_func, all_mins_func, new_top_file_func)
+
         if ";   ai     aj     ak    funct   theta         cth" in top_file_func[i]:
             print_new_angles()
             print(i)
         if ";    i      j      k      l   func   phase     kd      pn" in top_file_func[i]:
             print_new_dihedrals()
             print(i)
+    new_top_file_func.close()"""
 
 #Initializes names, types, coordinates, and number of atoms
 names_all, types_all=init_topology(topfile_opt)
@@ -163,15 +185,21 @@ for i in range(N_ST):
         common_ST=np.where(all_mins==j)[0]
         ST_res=np.append(ST_res, common_ST)
         AU_res=np.append(AU_res, all_mins[common_ST,:])
-    residues.append(atom.Residue(number=i, type='WTF', gold_atoms=np.unique(AU_res), sulphur_atoms=np.unique(ST_res)))
+    n_au_bonds=np.array([], dtype='int')
+    unique_AU_res=np.unique(AU_res)
+    for j in unique_AU_res:
+        n_au_bonds=np.append(n_au_bonds,counts_mins[unique_mins==j])
+    residues.append(atom.Residue(number=i, type='WTF', gold_atoms=unique_AU_res, sulphur_atoms=np.unique(ST_res), gold_n_bonds=n_au_bonds))
+
+#Residues with common atom lists are merged into one
 new_residues=[]
 res_number=1
 AU_sets=[]
-#Residues with common atom lists are merged into one
 for i in range(len(residues)):
-    if not (np.any([(residues[i].au_atoms == x).all() for x in AU_sets])):
-        AU_sets.append(residues[i].au_atoms)
-        new_residues.append(atom.Residue(number=res_number, type='WTF', gold_atoms=residues[i].au_atoms, sulphur_atoms=residues[i].s_atoms))
+    res_act=residues[i]
+    if not (np.any([(res_act.au_atoms == x).all() for x in AU_sets])):
+        AU_sets.append(res_act.au_atoms)
+        new_residues.append(atom.Residue(number=res_number, type='WTF', gold_atoms=res_act.au_atoms, sulphur_atoms=res_act.s_atoms, gold_n_bonds=res_act.au_n_bonds))
         res_number+=1
 
 #Residues are assigned a type according to the AU-ST-AU angles present
@@ -190,4 +218,5 @@ for i in range(len(new_residues)):
             new_residues[i].change_type('STV')
 
 #print_staple_pdb(new_residues, AU_xyz, ST_xyz, 'test.pdb')
-write_topology(topfile_opt, new_residues, AU_xyz, ST_xyz, names_all)
+#write_topology(topfile_opt, new_residues, AU_ini_at, ST_ini_at, names_all, 'test.top')
+print_new_bonds(new_residues, AU_ini_at, ST_ini_at, all_mins, 'bonds.top', names_all)
