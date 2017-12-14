@@ -22,7 +22,7 @@ cp ${LIG_MOL2}.mol2 ${CORE_PDB}.pdb ${SYS_NAME}
 sed  s"/${OLD_NAME}/${NEW_NAME}/" ${SYS_NAME}/${LIG_MOL2}.mol2 > ${SYS_NAME}/${NEW_NAME}.mol2
 
 #STONES THE SPECIFIED ATOMS OF THE LIGAND TO THE SULPHURS OF THE NP
-python3.6 ${DEPENDS}/NP_builder.py -l ${SYS_NAME}/${NEW_NAME}.mol2 -c ${SYS_NAME}/${CORE_PDB}.pdb -o ${SYS_NAME}/${SYS_NAME}_stoned.pdb -r ${NEW_NAME} -a ${ANCHOR_NDX}
+python3.6 ${DEPENDS}/NP_builder.py -l ${SYS_NAME}/${NEW_NAME}.mol2 -c ${SYS_NAME}/${CORE_PDB}.pdb -o ${SYS_NAME}/${SYS_NAME}_stoned.pdb -r ${NEW_NAME} -s ${ANCHOR_NDX}
 
 #WRITED FILE WITH THE FF PARAMETERS FOR THE LIGAND
 parmchk2 -i ${SYS_NAME}/${NEW_NAME}.mol2 -f mol2 -o ${SYS_NAME}/${NEW_NAME}.frcmod -a y

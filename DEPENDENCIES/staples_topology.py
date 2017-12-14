@@ -212,8 +212,6 @@ def print_new_angles(res_list_tmp, all_mins_tmp, mins_anchor_tmp, angles_file_fu
                 angles_func.write(str(real_au_ndx2).rjust(6)+str(real_s_ndx).rjust(7)+str(real_anchor_ndx).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_au_ndx2-1]+" - "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" m\n")
 
             #S-CT-HC
-            real_H1_atom=np.where(names_all_func=='H1')[0][anch_ndx]+1
-            real_H2_atom=np.where(names_all_func=='H2')[0][anch_ndx]+1
             for an_H in list_H_names_func:
                 if an_H=='H1' or an_H=='H2':
                     cons_value=418.40
@@ -221,7 +219,7 @@ def print_new_angles(res_list_tmp, all_mins_tmp, mins_anchor_tmp, angles_file_fu
                     real_H_ndx=np.where(names_all_func==an_H)[0][anch_ndx]+1
                     angles_func.write(str(real_s_ndx).rjust(6)+str(real_anchor_ndx).rjust(7)+str(real_H_ndx).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" - "+names_all_func[real_H_ndx-1]+" m\n")
                 else:
-                    print('There are angles without parameter, check H names')
+                    print('There are angles without parameters, check H names')
     angles_func.close()
 
 def print_new_dihedrals():
