@@ -8,10 +8,10 @@ import os
 
 #Declaration of the flags to run the script
 parser=OptionParser()
-parser.add_option("-x", "--gro", action="store", type='string', dest="GroFile", default='NP1.gro', help="Name of the .gro file with the staples")
-parser.add_option("-p", "--top", action="store", type='string', dest="TopFile", default='NP1.top', help="Name of the .top file associated to the file in -x")
+parser.add_option("-x", "--gro", action="store", type='string', dest="GroFile", default='NP.gro', help="Name of the .gro file with the staples")
+parser.add_option("-p", "--top", action="store", type='string', dest="TopFile", default='NP.top', help="Name of the .top file associated to the file in -x")
 parser.add_option("-a", "--anchor", action="store", type='string', dest="AnchorName", default='C1', help="Name of the ligands' atom linked to the staple")
-parser.add_option("-f", "--folder", action="store", type='string', dest="WorkDir", default='NP1', help="Path of the working directory to save intermediate files")
+parser.add_option("-f", "--folder", action="store", type='string', dest="WorkDir", default='NP', help="Path of the working directory to save intermediate files")
 parser.add_option("-y", "--hydrogen", action="append", dest="ListHAnchor", default=[], help="List of names of hydrogen atoms involved in a 3-atom angle with an ST")
 (options, args)= parser.parse_args()
 grofile_opt=options.GroFile
@@ -265,15 +265,11 @@ matrix_AU_ST=distance.cdist(ST_xyz, AU_xyz, 'euclidean')
 matrix_anchor_ST=distance.cdist(ST_xyz, anchor_xyz, 'euclidean')
 
 #Gets indexes of 2 closest AU atoms to each ST, also saving the unique indexes and number of times each unique index appears
-all_mins=np.zeros((N_ST,2))
-min_anchor=np.zeros(N_ST)
+all_mins=np.zeros((N_ST,2)).astype('int')
+min_anchor=np.zeros(N_ST).astype('int')
 for i in range(N_ST):
-    mins_ndx=matrix_AU_ST[i].argsort()[:2]
-    all_mins[i,:]=mins_ndx
-    mins_anchor_ndx=matrix_anchor_ST[i].argsort()[0]
-    min_anchor[i]=mins_anchor_ndx
-all_mins=all_mins.astype('int')
-min_anchor=min_anchor.astype('int')
+    all_mins[i,:]=matrix_AU_ST[i].argsort()[:2]
+    min_anchor[i]=matrix_anchor_ST[i].argsort()[0]
 unique_mins, counts_mins=np.unique(all_mins, return_counts=True)
 unique_mins=unique_mins.astype('int')
 
