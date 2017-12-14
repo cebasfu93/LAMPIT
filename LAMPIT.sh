@@ -11,7 +11,8 @@ NEW_NAME="LF1"  #New 3-letter residue name for the coating
 F_LEAP1="LeapLig"  #Name of the first tleap input
 F_LEAP2="LeapSys"  #Name of the second tleap input
 DEPENDS="/DATA/SoftwareSFU/IN-HOUSE/LAMPIT/DEPENDENCIES"  #Path of the folder with LAMPIT's dependencies
-
+ANCHOR_NAME="C1"
+ANCHOR_H="H1,H2"
 #Creates working directory
 mkdir $SYS_NAME
 cp $LIG_MOL2.mol2 $CORE_PDB.pdb $SYS_NAME
@@ -63,4 +64,4 @@ mv ${SYS_NAME}_GMX.top ${SYS_NAME}/${SYS_NAME}.top
 rm -rf em.mdp md.mdp leap.log ANTECHAMBER.FRCMOD
 
 #Modifies topology file to include bonds and angles involving staple atoms
-python3.6 ${DEPENDS}/staples_topology.py -p ${SYS_NAME}/$SYS_NAME.top -x ${SYS_NAME}/$SYS_NAME.gro -a C1
+python3.6 ${DEPENDS}/staples_topology.py -p ${SYS_NAME}/$SYS_NAME.top -x ${SYS_NAME}/$SYS_NAME.gro -a $ANCHOR_NAME -y $ANCHOR_H
