@@ -12,11 +12,13 @@ parser.add_option("-x", "--gro", action="store", type='string', dest="GroFile", 
 parser.add_option("-p", "--top", action="store", type='string', dest="TopFile", default='NP1.top', help="Name of the .top file associated to the file in -x")
 parser.add_option("-a", "--anchor", action="store", type='string', dest="AnchorName", default='C1', help="Name of the ligands' atom linked to the staple")
 parser.add_option("-f", "--folder", action="store", type='string', dest="WorkDir", default='NP1', help="Path of the working directory to save intermediate files")
+parser.add_option("-y", "--hydrogen", action="append", dest="ListHAnchor", default=[], help="List of names of hydrogen atoms involved in a 3-atom angle with an ST")
 (options, args)= parser.parse_args()
 grofile_opt=options.GroFile
 topfile_opt=options.TopFile
 anchorname_opt=options.AnchorName
 workdir_opt=options.WorkDir
+list_Hs_opt=options.ListHAnchor[0].split(',')
 
 def init_element(grofile_func, element):
     #Returns the xyz coordinates of the atoms with name 'element'
@@ -139,7 +141,7 @@ def print_new_bonds(res_list_tmp, all_mins_tmp, mins_anchor_tmp, bonds_file_func
             bonds_func.write(str(real_s_ndx).rjust(6)+str(real_anchor_ndx).rjust(7)+str(function_type).rjust(4)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" m\n")
     bonds_func.close()
 
-def print_new_angles(res_list_tmp, all_mins_tmp, mins_anchor_tmp, angles_file_func, names_all_func, types_all_func, anch_name):
+def print_new_angles(res_list_tmp, all_mins_tmp, mins_anchor_tmp, angles_file_func, names_all_func, types_all_func, anch_name, list_H_names_func):
     #Prints the angles with staple atoms present
     angles_func=open(angles_file_func, "w")
     function_type=str(1)
@@ -199,6 +201,7 @@ def print_new_angles(res_list_tmp, all_mins_tmp, mins_anchor_tmp, angles_file_fu
                 zero_value=106.8
                 angles_func.write(str(real_au_ndx2).rjust(6)+str(real_s_ndx).rjust(7)+str(real_anchor_ndx).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_au_ndx2-1]+" - "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" m\n")
 
+            #Au_surf-S-C
             elif (neigh_count_au1==1):
                 cons_value=146.370
                 zero_value=111.6
@@ -207,8 +210,19 @@ def print_new_angles(res_list_tmp, all_mins_tmp, mins_anchor_tmp, angles_file_fu
                 cons_value=146.370
                 zero_value=111.6
                 angles_func.write(str(real_au_ndx2).rjust(6)+str(real_s_ndx).rjust(7)+str(real_anchor_ndx).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_au_ndx2-1]+" - "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" m\n")
+
+            #S-CT-HC
+            real_H1_atom=np.where(names_all_func=='H1')[0][anch_ndx]+1
+            real_H2_atom=np.where(names_all_func=='H2')[0][anch_ndx]+1
+            for an_H in list_H_names_func:
+                if an_H=='H1' or an_H=='H2':
+                    cons_value=418.40
+                    zero_value=107.0
+                    real_H_ndx=np.where(names_all_func==an_H)[0][anch_ndx]+1
+                    angles_func.write(str(real_s_ndx).rjust(6)+str(real_anchor_ndx).rjust(7)+str(real_H_ndx).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" - "+names_all_func[real_H_ndx-1]+" m\n")
+                else:
+                    print('There are angles without parameter, check H names')
     angles_func.close()
-    return 0
 
 def print_new_dihedrals():
     #Prints the proper dihedrals with staple atoms present
@@ -314,5 +328,5 @@ for i in range(len(new_residues)):
 
 print_staple_pdb(new_residues, AU_xyz, ST_xyz, workdir_opt+'/staples.pdb')
 print_new_bonds(new_residues, all_mins, min_anchor, workdir_opt+'/bonds.top', names_all, types_all, anchorname_opt)
-print_new_angles(new_residues, all_mins, min_anchor, workdir_opt+'/angles.top', names_all, types_all, anchorname_opt)
-write_topology(topfile_opt, workdir_opt+'bonds.top', workdir_opt+'/angles.top')
+print_new_angles(new_residues, all_mins, min_anchor, workdir_opt+'/angles.top', names_all, types_all, anchorname_opt, list_Hs_opt)
+write_topology(topfile_opt, workdir_opt+'/bonds.top', workdir_opt+'/angles.top')
