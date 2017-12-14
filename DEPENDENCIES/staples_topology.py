@@ -124,10 +124,6 @@ def print_new_bonds(res_list_tmp, all_mins_tmp, mins_anchor_tmp, bonds_file_func
                     print('WTF')
                 bonds_func.write(str(real_s_ndx).rjust(6)+str(real_au_ndx).rjust(7)+str(function_type).rjust(4)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_au_ndx-1]+" m\n")
 
-    for res_act in res_list_tmp:
-        for j in range(len(res_act.s_atoms)):
-            s_atom_act=res_act.s_atoms[j]
-            real_s_ndx=np.where(names_all_func=='ST')[0][s_atom_act]+1
             anch_ndx=mins_anchor_tmp[s_atom_act]
             real_anchor_ndx=np.where(names_all_func==anch_name)[0][anch_ndx]+1
             if types_all_func[np.where(names_all_func==anch_name)[0][anch_ndx]]=='CA':
@@ -221,10 +217,6 @@ def print_new_angles(res_list_tmp, all_mins_tmp, mins_anchor_tmp, angles_file_fu
                 else:
                     print('There are angles without parameters, check H names')
     angles_func.close()
-
-def print_new_dihedrals():
-    #Prints the proper dihedrals with staple atoms present
-    return 0
 
 def write_topology(top_file_func, bonds_file_func, angles_file_func):
 
