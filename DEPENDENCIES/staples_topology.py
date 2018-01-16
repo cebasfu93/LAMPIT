@@ -31,11 +31,9 @@ def init_element(grofile_func, element):
             N_elem_func+=1
             ndx_element.append(i)
     elem_xyz_func=np.zeros((N_elem_func,3))
-    elem_names_func=[]
     for i in range(len(ndx_element)):
         elem_actual=elem_file_func[ndx_element[i]].split()
         elem_xyz_func[i,:]=elem_actual[4:7]
-        elem_names_func.append(elem_actual[2])
 
     return np.array(elem_xyz_func)*10
 
@@ -121,7 +119,7 @@ def print_new_bonds(res_list_tmp, all_mins_tmp, mins_anchor_tmp, bonds_file_func
                 elif res_act.au_n_bonds[np.where(res_act.au_atoms==au_ndx)]==1:
                     zero_value=0.241
                 else:
-                    print('WTF')
+                    print('WTF. Gold atoms with unknown valence')
                 bonds_func.write(str(real_s_ndx).rjust(6)+str(real_au_ndx).rjust(7)+str(function_type).rjust(4)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_au_ndx-1]+" m\n")
 
             anch_ndx=mins_anchor_tmp[s_atom_act]
@@ -133,7 +131,7 @@ def print_new_bonds(res_list_tmp, all_mins_tmp, mins_anchor_tmp, bonds_file_func
                 cons_value=99113.0
                 zero_value=0.184
             else:
-                print('Missing parameters')
+                print('Missing parameters for ST-anchor bond')
             bonds_func.write(str(real_s_ndx).rjust(6)+str(real_anchor_ndx).rjust(7)+str(function_type).rjust(4)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" m\n")
     bonds_func.close()
 
@@ -142,6 +140,7 @@ def print_new_angles(res_list_tmp, all_mins_tmp, mins_anchor_tmp, angles_file_fu
     angles_func=open(angles_file_func, "w")
     function_type=str(1)
     for res_act in res_list_tmp:
+        saus_list=[]
         for j in range(len(res_act.s_atoms)):
             s_atom_act=res_act.s_atoms[j]
             real_s_ndx=np.where(names_all_func=='ST')[0][s_atom_act]+1
@@ -175,9 +174,12 @@ def print_new_angles(res_list_tmp, all_mins_tmp, mins_anchor_tmp, angles_file_fu
                 s_atoms_angle=np.where(all_mins_tmp==au_ndx1)[0]
                 real_s_ndx1=np.where(names_all_func=='ST')[0][s_atoms_angle[0]]+1
                 real_s_ndx2=np.where(names_all_func=='ST')[0][s_atoms_angle[1]]+1
-                cons_value=460.240
-                zero_value=172.4
-                angles_func.write(str(real_s_ndx1).rjust(6)+str(real_au_ndx1).rjust(7)+str(real_s_ndx2).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx1-1]+" - "+names_all_func[real_au_ndx1-1]+" - "+names_all_func[real_s_ndx2-1]+" m\n")
+                saus_sum=real_s_ndx1+real_au_ndx1+real_s_ndx2
+                if saus_sum not in saus_list:
+                    saus_list.append(saus_sum)
+                    cons_value=460.240
+                    zero_value=172.4
+                    angles_func.write(str(real_s_ndx1).rjust(6)+str(real_au_ndx1).rjust(7)+str(real_s_ndx2).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx1-1]+" - "+names_all_func[real_au_ndx1-1]+" - "+names_all_func[real_s_ndx2-1]+" m\n")
 
                 #AU_Lig-S-C
                 cons_value=146.370
@@ -188,9 +190,12 @@ def print_new_angles(res_list_tmp, all_mins_tmp, mins_anchor_tmp, angles_file_fu
                 s_atoms_angle=np.where(all_mins_tmp==au_ndx2)[0]
                 real_s_ndx1=np.where(names_all_func=='ST')[0][s_atoms_angle[0]]+1
                 real_s_ndx2=np.where(names_all_func=='ST')[0][s_atoms_angle[1]]+1
-                cons_value=460.240
-                zero_value=172.4
-                angles_func.write(str(real_s_ndx1).rjust(6)+str(real_au_ndx2).rjust(7)+str(real_s_ndx2).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx1-1]+" - "+names_all_func[real_au_ndx2-1]+" - "+names_all_func[real_s_ndx2-1]+" m\n")
+                saus_sum=real_s_ndx1+real_au_ndx2+real_s_ndx2
+                if saus_sum not in saus_list:
+                    saus_list.append(saus_sum)
+                    cons_value=460.240
+                    zero_value=172.4
+                    angles_func.write(str(real_s_ndx1).rjust(6)+str(real_au_ndx2).rjust(7)+str(real_s_ndx2).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx1-1]+" - "+names_all_func[real_au_ndx2-1]+" - "+names_all_func[real_s_ndx2-1]+" m\n")
 
                 #AU_Lig-S-C
                 cons_value=146.370
@@ -198,24 +203,21 @@ def print_new_angles(res_list_tmp, all_mins_tmp, mins_anchor_tmp, angles_file_fu
                 angles_func.write(str(real_au_ndx2).rjust(6)+str(real_s_ndx).rjust(7)+str(real_anchor_ndx).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_au_ndx2-1]+" - "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" m\n")
 
             #Au_surf-S-C
-            elif (neigh_count_au1==1):
+            if (neigh_count_au1==1):
                 cons_value=146.370
                 zero_value=111.6
                 angles_func.write(str(real_au_ndx1).rjust(6)+str(real_s_ndx).rjust(7)+str(real_anchor_ndx).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_au_ndx1-1]+" - "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" m\n")
-            elif (neigh_count_au2==1):
+            if (neigh_count_au2==1):
                 cons_value=146.370
                 zero_value=111.6
                 angles_func.write(str(real_au_ndx2).rjust(6)+str(real_s_ndx).rjust(7)+str(real_anchor_ndx).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_au_ndx2-1]+" - "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" m\n")
 
             #S-CT-HC
             for an_H in list_H_names_func:
-                if an_H=='H1' or an_H=='H2':
-                    cons_value=418.40
-                    zero_value=107.0
-                    real_H_ndx=np.where(names_all_func==an_H)[0][anch_ndx]+1
-                    angles_func.write(str(real_s_ndx).rjust(6)+str(real_anchor_ndx).rjust(7)+str(real_H_ndx).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" - "+names_all_func[real_H_ndx-1]+" m\n")
-                else:
-                    print('There are angles without parameters, check H names')
+                cons_value=418.40
+                zero_value=107.0
+                real_H_ndx=np.where(names_all_func==an_H)[0][anch_ndx]+1
+                angles_func.write(str(real_s_ndx).rjust(6)+str(real_anchor_ndx).rjust(7)+str(real_H_ndx).rjust(7)+str(function_type).rjust(7)+"{:.4e}".format(zero_value).rjust(14)+"{:.4e}".format(cons_value).rjust(14)+" ; "+names_all_func[real_s_ndx-1]+" - "+names_all_func[real_anchor_ndx-1]+" - "+names_all_func[real_H_ndx-1]+" m\n")
     angles_func.close()
 
 def write_topology(top_file_func, bonds_file_func, angles_file_func):

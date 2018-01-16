@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from optparse import OptionParser
 import os
 import sys
+from  transformations import *
 
 #Declaration of the flags to run the script
 parser=OptionParser()
@@ -31,7 +32,7 @@ def check_options(core_fname, ligand_fname, stones_fndx):
     if not (os.path.isfile(ligand_fname)):
         sys.exit("Ligand file could not be found")
     if not stones_fndx[-1]:
-        sys.exit("No list of indexes was provided to do the alignment")
+        sys.exit("No list of indexes was provided to do the roto-translation")
 
 def init_lig_mol2(ligand_fname):
     #Imports ligand mol2 file. Returns xyz coordinates and names
@@ -45,14 +46,12 @@ def init_lig_mol2(ligand_fname):
     lig_file=lig_file[ini:fin]
     n_at=len(lig_file)
     names_lig_func=[]
-    types_lig_func=[]
     xyz_lig_func=np.zeros((n_at,3))
     for i in range(n_at):
         at_file=lig_file[i].split()
         names_lig_func.append(at_file[1])
-        types_lig_func.append(at_file[5])
         xyz_lig_func[i,:]=at_file[2:5]
-    return np.array(xyz_lig_func), np.array(names_lig_func), np.array(types_lig_func)
+    return np.array(xyz_lig_func), np.array(names_lig_func)
 
 def init_core_pdb(core_fname):
     #Imports core pdb file. Returns xyz coordinates and names
@@ -64,7 +63,7 @@ def init_core_pdb(core_fname):
             N_core_func+=1
             if first==1:
                 ini=i
-                first=2
+                first=0
     core_file=core_file[ini:ini+N_core_func]
     names_core_func=[]
     xyz_core_func=np.zeros((N_core_func,3))
@@ -75,7 +74,7 @@ def init_core_pdb(core_fname):
     return np.array(xyz_core_func), np.array(names_core_func)
 
 check_options(corename_opt, ligname_opt, stones_ndx_opt)
-xyz_lig, names_lig, types_lig=init_lig_mol2(ligname_opt)
+xyz_lig, names_lig=init_lig_mol2(ligname_opt)
 xyz_core, names_core=init_core_pdb(corename_opt)
 
 #Define number of atoms in a ligand, number of staples, and number of stones specified
@@ -109,22 +108,27 @@ def get_stone(xyz_stones_tmp, xyz_lig_tmp, stone_ndx, stones_ndx_func):
     scaling=(mag_C+np.linalg.norm(xyz_lig_tmp[stones_ndx_func[stone_ndx],:]-xyz_lig_tmp[stones_ndx_func[0],:]))/mag_C
     return scaling*xyz_stones_tmp
 
+def get_stones_mol2(xyz_lig_func, ndx_stones_func):
+    xyz_stones_mol2_func=np.zeros((N_stones,3))
+    for i in range(len(ndx_stones_func)):
+        xyz_stones_mol2_func[i,:]=xyz_lig_func[ndx_stones_func[i],:]
+    return xyz_stones_mol2_func
+
 def place_stones(xyz_core_func, names_core_func, xyz_lig_func, names_lig_func, name_anchor_func, stones_ndx_func):
     #Returns the xyz coordinates and names of the ligands in the coating (starting from the anchor)
     xyz_anch=get_anchor(xyz_core_func, names_core_func, name_anchor_func)
     N_stones_func=N_stones*N_S
     xyz_stones_func=np.zeros((N_stones_func,3))
-    names_stones_func=np.zeros(N_stones_func)
-    names_stones_func=names_stones_func.astype('str')
+    names_stones_func=np.zeros(N_stones).astype('str')
+    for i in range(N_stones):
+        names_stones_func[i]=names_lig_func[stones_ndx_func[i]]
     for i in range(N_S):
         xyz_stones_func[i*N_stones,:]=xyz_anch[i,:]
-        names_stones_func[i*N_stones]=names_lig_func[stones_ndx_func[0]]
         for j in range(1,N_stones):
             xyz_stones_func[i*N_stones+j,:]=get_stone(xyz_stones_func[i*N_stones,:], xyz_lig_func, j, stones_ndx_func)
-            names_stones_func[i*N_stones+j]=names_lig_func[stones_ndx_func[j]]
     return xyz_stones_func, names_stones_func
 
-def coat_NP(xyz_core_func, names_core_func, xyz_stones_func, names_stones_func):
+def coat_NP(xyz_core_func, names_core_func, xyz_stones_func, xyz_lig_func, names_lig_func, names_stones_func, ndx_stones):
     #Merges xyz coordinates and names of the core and the ligands into one coated NP
     keep_rows=[]
     for i in range(len(names_core_func)):
@@ -133,11 +137,21 @@ def coat_NP(xyz_core_func, names_core_func, xyz_stones_func, names_stones_func):
     xyz_naked_func=xyz_core_func[keep_rows,:]
     names_naked_func=names_core_func[keep_rows]
 
-    xyz_coated_func=np.append(xyz_naked_func, xyz_stones_func, axis=0)
-    names_coated_func=np.append(names_naked_func, names_stones_func, axis=0)
+    xyz_coated_func=xyz_naked_func
+    names_coated_func=names_naked_func
+
+    xyz_stones_mol2=get_stones_mol2(xyz_lig_func, ndx_stones)
+    xyz_lig_func_conv=np.insert(xyz_lig_func, 3, 1, axis=1).T
+    for i in range(N_S):
+        xyz_stones_now=xyz_stones_func[i*N_stones:(i+1)*N_stones,:]
+        trans_matrix=affine_matrix_from_points(xyz_stones_mol2.T, xyz_stones_now.T, shear=False, scale=False, usesvd=True)
+        trans_lig=np.dot(trans_matrix, xyz_lig_func_conv).T[:,:3]
+
+        xyz_coated_func=np.append(xyz_coated_func, trans_lig, axis=0)
+        names_coated_func=np.append(names_coated_func, names_lig_func, axis=0)
     return xyz_coated_func, names_coated_func
 
-def print_NP_pdb(xyz_coated_func, names_coated_func, names_lig_func, out_fname, stones_ndx_func):
+def print_NP_pdb(xyz_coated_func, names_coated_func, names_stones_func, out_fname):
     #Writes the pdb of the core and the placed stones
     output=open(out_fname, "w")
     res=1
@@ -149,7 +163,7 @@ def print_NP_pdb(xyz_coated_func, names_coated_func, names_lig_func, out_fname, 
             res+=1
             write_pdb_block(at_name_act, at_name_act, xyz_coated_func[i,:], res, at, out_fname)
         else:
-            if(at_name_act==names_lig_func[stones_ndx_func[0]]):
+            if(at_name_act==names_stones_func[0]):
                 res+=1
             write_pdb_block(at_name_act, res_name_opt, xyz_coated_func[i,:], res, at, out_fname)
     output.close()
@@ -179,6 +193,6 @@ def print_xyz(coordenadas, nombres, fnombre):
 names_core=change_names(names_core, core_at_name_opt, staple_at_name_opt)
 centered_core=center_COM(xyz_core, names_core, 'AU')
 xyz_stones, names_stones=place_stones(centered_core, names_core, xyz_lig, names_lig, name_anchor_opt, stones_ndx_opt)
-xyz_coated_NP, names_coated_NP=coat_NP(centered_core, names_core, xyz_stones, names_stones)
+xyz_coated_NP, names_coated_NP=coat_NP(centered_core, names_core, xyz_stones, xyz_lig, names_lig, names_stones, stones_ndx_opt)
 #print_xyz(xyz_coated_NP, names_coated_NP, outname_opt)
-print_NP_pdb(xyz_coated_NP, names_coated_NP, names_lig, outname_opt, stones_ndx_opt)
+print_NP_pdb(xyz_coated_NP, names_coated_NP, names_stones, outname_opt)
