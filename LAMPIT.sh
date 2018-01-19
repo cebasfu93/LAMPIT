@@ -10,7 +10,7 @@ NEW_NAME="LF1"  #New 3-letter residue name for the coating
 
 F_LEAP1="LeapLig"  #Name of the first tleap input
 F_LEAP2="LeapSys"  #Name of the second tleap input
-DEPENDS="/DATA/SoftwareSFU/IN-HOUSE/LAMPIT/DEPENDENCIES/test"  #Path of the folder with LAMPIT's dependencies
+DEPENDS="/DATA/SoftwareSFU/IN-HOUSE/LAMPIT/DEPENDENCIES/"  #Path of the folder with LAMPIT's dependencies
 ANCHOR_NAME="C1"
 ANCHOR_H="H1,H2"
 
