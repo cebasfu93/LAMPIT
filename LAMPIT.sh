@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #OPTIONS FOR THE USER
-SYS_NAME="NP1-1"  #Prefix used for the generation of files
+SYS_NAME="test"  #Prefix used for the generation of files
 LIG_MOL2="Mol-ia1_m1-c2" #mol2 file of a linear ligand with the right charges
 CORE_PDB="au144SR60"  #path to the pdb of the NP's core including the first carbon
 ANCHOR_NDX="0,6,12"  #Indexes of the atoms in LIG_MOL2 that will be aligned to the COM-C1 vector
@@ -30,10 +30,10 @@ parmchk2 -i ${SYS_NAME}/${NEW_NAME}.mol2 -f mol2 -o ${SYS_NAME}/${NEW_NAME}.frcm
 
 #Writes first input file for tleap and writes the .lib file for the ligand
 echo "source leaprc.gaff" > ${SYS_NAME}/${F_LEAP1}.in
-echo "loadamberparams ${NEW_NAME}.frcmod \n" >> ${SYS_NAME}/${F_LEAP1}.in
-echo "${NEW_NAME} = loadmol3 ${NEW_NAME}.mol2" >> ${SYS_NAME}/${F_LEAP1}.in
+echo "loadamberparams ${SYS_NAME}/${NEW_NAME}.frcmod \n" >> ${SYS_NAME}/${F_LEAP1}.in
+echo "${NEW_NAME} = loadmol3 ${SYS_NAME}/${NEW_NAME}.mol2" >> ${SYS_NAME}/${F_LEAP1}.in
 echo "check ${NEW_NAME}" >> ${SYS_NAME}/${F_LEAP1}.in
-echo "saveoff ${NEW_NAME} ${NEW_NAME}.lib \n" >> ${SYS_NAME}/${F_LEAP1}.in
+echo "saveoff ${NEW_NAME} ${SYS_NAME}/${NEW_NAME}.lib \n" >> ${SYS_NAME}/${F_LEAP1}.in
 echo "#saveamberparm ${NEW_NAME} ${NEW_NAME}.prmtop ${NEW_NAME}.inpcrd \n" >> ${SYS_NAME}/${F_LEAP1}.in
 echo "quit" >> ${SYS_NAME}/${F_LEAP1}.in
 

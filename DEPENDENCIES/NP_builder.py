@@ -154,7 +154,7 @@ def coat_NP(xyz_core_func, names_core_func, xyz_stones_func, xyz_lig_func, names
 def print_NP_pdb(xyz_coated_func, names_coated_func, names_stones_func, out_fname):
     #Writes the pdb of the core and the placed stones
     output=open(out_fname, "w")
-    res=1
+    res=0
     at=0
     for i in range(len(names_coated_func)):
         at+=1
