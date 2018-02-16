@@ -154,14 +154,14 @@ def coat_NP(xyz_core_func, names_core_func, xyz_stones_func, xyz_lig_func, names
 def print_NP_pdb(xyz_coated_func, names_coated_func, names_stones_func, out_fname):
     #Writes the pdb of the core and the placed stones
     output=open(out_fname, "w")
-    res=0
+    res=1
     at=0
     for i in range(len(names_coated_func)):
         at+=1
         at_name_act=names_coated_func[i]
         if at_name_act=='AU' or at_name_act=='ST':
-            res+=1
             write_pdb_block(at_name_act, at_name_act, xyz_coated_func[i,:], res, at, out_fname)
+            res+=1
         else:
             if(at_name_act==names_stones_func[0]):
                 res+=1

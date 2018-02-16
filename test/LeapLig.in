@@ -1,0 +1,10 @@
+source leaprc.gaff
+loadamberparams test/LF1.frcmod 
+
+LF1 = loadmol3 test/LF1.mol2
+check LF1
+saveoff LF1 test/LF1.lib 
+
+#saveamberparm LF1 LF1.prmtop LF1.inpcrd 
+
+quit

@@ -1,0 +1,30 @@
+-I: Adding /DATA/SoftwareSFU/anaconda3/dat/leap/prep to search path.
+-I: Adding /DATA/SoftwareSFU/anaconda3/dat/leap/lib to search path.
+-I: Adding /DATA/SoftwareSFU/anaconda3/dat/leap/parm to search path.
+-I: Adding /DATA/SoftwareSFU/anaconda3/dat/leap/cmd to search path.
+-s: Ignoring startup file: leaprc
+-f: Source test/LeapLig.in.
+
+Welcome to LEaP!
+Sourcing: ./test/LeapLig.in
+----- Source: /DATA/SoftwareSFU/anaconda3/dat/leap/cmd/leaprc.gaff
+----- Source of /DATA/SoftwareSFU/anaconda3/dat/leap/cmd/leaprc.gaff done
+Log file: ./leap.log
+Loading parameters: /DATA/SoftwareSFU/anaconda3/dat/leap/parm/gaff.dat
+Reading title:
+AMBER General Force Field for organic molecules (Version 1.8, Mar 2015)
+Loading parameters: ./test/LF1.frcmod
+Reading force field modification type file (frcmod)
+Reading title:
+Remark line goes here
+Loading Mol3 file: ./test/LF1.mol2
+Reading MOLECULE named LF1_0
+Checking 'LF1'....
+Checking parameters for unit 'LF1'.
+Checking for bond parameters.
+Checking for angle parameters.
+Unit is OK.
+ Creating test/LF1.lib
+Building topology.
+Building atom parameters.
+	Quit

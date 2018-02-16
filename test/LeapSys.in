@@ -1,0 +1,17 @@
+source leaprc.gaff 
+
+loadoff test/LF1.lib
+loadamberparams test/LF1.frcmod
+loadamberparams /DATA/SoftwareSFU/IN-HOUSE/LAMPIT/DEPENDENCIES//AU.frcmod
+loadamberparams /DATA/SoftwareSFU/IN-HOUSE/LAMPIT/DEPENDENCIES//ST.frcmod 
+
+LF1 = loadmol3 test/LF1.mol2
+AU = loadmol3 /DATA/SoftwareSFU/IN-HOUSE/LAMPIT/DEPENDENCIES//AU.mol2
+ST = loadmol3 /DATA/SoftwareSFU/IN-HOUSE/LAMPIT/DEPENDENCIES//ST.mol2 
+
+test = loadpdb test/test_stoned.pdb
+savepdb test test/test.pdb 
+
+saveamberparm test test/test.prmtop test/test.inpcrd 
+
+quit
