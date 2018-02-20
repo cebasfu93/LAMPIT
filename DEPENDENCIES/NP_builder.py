@@ -46,21 +46,22 @@ def change_names(names_core_func):
 def init_lig_mol2(ligand_fname):
     #Imports ligand mol2 file. Returns xyz coordinates and names
     lig_file=np.genfromtxt(ligand_fname, delimiter='\n', dtype='str')
-    for i in range(len(lig_file)):
-        if "@<TRIPOS>ATOM" in lig_file[i]:
-            ini=i+1
+    N_lig_file=len(lig_file)
+    found_ATOM=0
+    names_lig_func=[]
+    xyz_lig_func=[]
+    for i in range(N_lig_file):
         if "@<TRIPOS>BOND" in lig_file[i]:
             fin=i
             break
-    lig_file=lig_file[ini:fin]
-    n_at=len(lig_file)
-    names_lig_func=[]
-    xyz_lig_func=np.zeros((n_at,3))
-    for i in range(n_at):
-        at_file=lig_file[i].split()
-        names_lig_func.append(at_file[1])
-        xyz_lig_func[i,:]=at_file[2:5]
-    return np.array(xyz_lig_func), np.array(names_lig_func)
+        if found_ATOM == 1:
+            at_file=lig_file[i].split()
+            names_lig_func.append(at_file[1])
+            xyz_lig_func.append(at_file[2:5])
+        if "@<TRIPOS>ATOM" in lig_file[i]:
+            ini=i+1
+            found_ATOM=1
+    return np.array(xyz_lig_func, dtype='float'), np.array(names_lig_func)
 
 def init_core_pdb(core_fname):
     #Imports core pdb file. Returns xyz coordinates and names
@@ -84,7 +85,7 @@ def init_core_pdb(core_fname):
     names_core_func=np.array(names_core_func)
 
     names_core_func=change_names(names_core_func)
-    
+
     COM=np.average(xyz_core_func[names_core_func=='AU',:], axis=0)
 
     for i in range(len(xyz_core_func[:,0])):
@@ -94,7 +95,6 @@ def init_core_pdb(core_fname):
 check_options(corename_opt, ligname_opt, stones_ndx_opt)
 xyz_lig, names_lig=init_lig_mol2(ligname_opt)
 xyz_core, names_core=init_core_pdb(corename_opt)
-
 #Define number of atoms in a ligand, number of staples, and number of stones specified
 N_at_lig=len(xyz_lig[:,0])
 N_S=len(names_core[names_core=='ST'])
@@ -192,7 +192,6 @@ def print_xyz(coordenadas, nombres, fnombre):
         output.write(str(nombres[i]) + " " + str(coordenadas[i,0]) + " " + str(coordenadas[i,1]) + " " + str(coordenadas[i,2]) + "\n")
     output.close()
 
-names_core=change_names(names_core)
 xyz_stones, names_stones=place_stones(xyz_core, names_core, xyz_lig, names_lig, name_anchor_opt, stones_ndx_opt)
 xyz_coated_NP, names_coated_NP=coat_NP(xyz_core, names_core, xyz_stones, xyz_lig, names_lig, names_stones, stones_ndx_opt)
 #print_xyz(xyz_coated_NP, names_coated_NP, outname_opt)
