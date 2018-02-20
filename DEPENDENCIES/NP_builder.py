@@ -53,15 +53,17 @@ def init_lig_mol2(ligand_fname):
     for i in range(N_lig_file):
         if "@<TRIPOS>BOND" in lig_file[i]:
             fin=i
-            break
-        if found_ATOM == 1:
+            found_ATOM = 0
+        elif found_ATOM == 1:
             at_file=lig_file[i].split()
             names_lig_func.append(at_file[1])
             xyz_lig_func.append(at_file[2:5])
-        if "@<TRIPOS>ATOM" in lig_file[i]:
+        elif "@<TRIPOS>ATOM" in lig_file[i]:
             ini=i+1
             found_ATOM=1
-    return np.array(xyz_lig_func, dtype='float'), np.array(names_lig_func)
+        elif "@<TRIPOS>RESIDUECONNECT" in lig_file[i]:
+            anchor_ndx_func=int(lig_file[i+1].split()[0])-1
+    return np.array(xyz_lig_func, dtype='float'), np.array(names_lig_func), anchor_ndx_func
 
 def init_core_pdb(core_fname):
     #Imports core pdb file. Returns xyz coordinates and names
@@ -93,7 +95,7 @@ def init_core_pdb(core_fname):
     return xyz_core_func, names_core_func
 
 check_options(corename_opt, ligname_opt, stones_ndx_opt)
-xyz_lig, names_lig=init_lig_mol2(ligname_opt)
+xyz_lig, names_lig, anchor_ndx=init_lig_mol2(ligname_opt)
 xyz_core, names_core=init_core_pdb(corename_opt)
 #Define number of atoms in a ligand, number of staples, and number of stones specified
 N_at_lig=len(xyz_lig[:,0])
