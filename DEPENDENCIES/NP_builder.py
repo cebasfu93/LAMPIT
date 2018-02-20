@@ -34,6 +34,15 @@ def check_options(core_fname, ligand_fname, stones_fndx):
     if not stones_fndx[-1]:
         sys.exit("No list of indexes was provided to do the roto-translation")
 
+def change_names(names_core_func):
+    #Changes the name of the original atoms in the core for AU, and the staples for ST. This names are required for the rest of LAMPIT
+    for i in range(len(names_core_func)):
+        if(names_core_func[i]==core_at_name_opt):
+            names_core_func[i]='AU'
+        elif (names_core_func[i]==staple_at_name_opt):
+            names_core_func[i]='ST'
+    return names_core_func
+
 def init_lig_mol2(ligand_fname):
     #Imports ligand mol2 file. Returns xyz coordinates and names
     lig_file=np.genfromtxt(ligand_fname, delimiter='\n', dtype='str')
@@ -74,7 +83,9 @@ def init_core_pdb(core_fname):
     xyz_core_func=np.array(xyz_core_func)
     names_core_func=np.array(names_core_func)
 
-    COM=np.average(xyz_core_func[names_core_func=='Au',:], axis=0)
+    names_core_func=change_names(names_core_func)
+    
+    COM=np.average(xyz_core_func[names_core_func=='AU',:], axis=0)
 
     for i in range(len(xyz_core_func[:,0])):
         xyz_core_func[i,:]=xyz_core_func[i,:]-COM
@@ -86,17 +97,8 @@ xyz_core, names_core=init_core_pdb(corename_opt)
 
 #Define number of atoms in a ligand, number of staples, and number of stones specified
 N_at_lig=len(xyz_lig[:,0])
-N_S=len(names_core[names_core==staple_at_name_opt])
+N_S=len(names_core[names_core=='ST'])
 N_stones=len(stones_ndx_opt)
-
-def change_names(names_core_func, core_at_name_func, staple_at_name_func):
-    #Changes the name of the original atoms in the core for AU, and the staples for ST. This names are required for the rest of LAMPIT
-    for i in range(len(names_core_func)):
-        if(names_core_func[i]==core_at_name_func):
-            names_core_func[i]='AU'
-        elif (names_core_func[i]==staple_at_name_func):
-            names_core_func[i]='ST'
-    return names_core_func
 
 def get_anchor(xyz_core_func, names_core_func, name_anchor_tmp):
     #Returns xyz coordinates of the anchors
@@ -190,7 +192,7 @@ def print_xyz(coordenadas, nombres, fnombre):
         output.write(str(nombres[i]) + " " + str(coordenadas[i,0]) + " " + str(coordenadas[i,1]) + " " + str(coordenadas[i,2]) + "\n")
     output.close()
 
-names_core=change_names(names_core, core_at_name_opt, staple_at_name_opt)
+names_core=change_names(names_core)
 xyz_stones, names_stones=place_stones(xyz_core, names_core, xyz_lig, names_lig, name_anchor_opt, stones_ndx_opt)
 xyz_coated_NP, names_coated_NP=coat_NP(xyz_core, names_core, xyz_stones, xyz_lig, names_lig, names_stones, stones_ndx_opt)
 #print_xyz(xyz_coated_NP, names_coated_NP, outname_opt)

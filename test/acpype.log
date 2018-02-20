@@ -6,4 +6,4 @@ Converting Amber input files to Gromacs ...
 
 ==> Writing GMX dihedrals for GMX 4.5.
 
-Total time of execution: 1s
+Total time of execution: less than a second

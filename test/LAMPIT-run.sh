@@ -4,7 +4,7 @@
 SYS_NAME="test"  #Prefix used for the generation of files
 LIG_MOL2="Mol-ia1_m1-c2" #mol2 file of a linear ligand with the right charges
 CORE_PDB="au144SR60"  #path to the pdb of the NP's core including the first carbon
-ANCHOR_NDX="0,6,12"  #Indexes of the atoms in LIG_MOL2 that will be aligned to the COM-C1 vector
+ANCHOR_NDX="0,6,12"  #Indexes of the atoms in LIG_MOL2 that will be aligned to the COM-C1 vector. The first index must match the index of the "ANCHOR_NAME"
 OLD_NAME="F00"  #Name of the ligand in LIG_MOL2
 NEW_NAME="LF1"  #New 3-letter residue name for the coating
 
