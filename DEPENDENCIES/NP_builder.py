@@ -71,7 +71,14 @@ def init_core_pdb(core_fname):
         at_file=core_file[i].split()
         names_core_func.append(at_file[2])
         xyz_core_func[i,:]=at_file[5:8]
-    return np.array(xyz_core_func), np.array(names_core_func)
+    xyz_core_func=np.array(xyz_core_func)
+    names_core_func=np.array(names_core_func)
+
+    COM=np.average(xyz_core_func[names_core_func=='Au',:], axis=0)
+
+    for i in range(len(xyz_core_func[:,0])):
+        xyz_core_func[i,:]=xyz_core_func[i,:]-COM
+    return xyz_core_func, names_core_func
 
 check_options(corename_opt, ligname_opt, stones_ndx_opt)
 xyz_lig, names_lig=init_lig_mol2(ligname_opt)
@@ -90,13 +97,6 @@ def change_names(names_core_func, core_at_name_func, staple_at_name_func):
         elif (names_core_func[i]==staple_at_name_func):
             names_core_func[i]='ST'
     return names_core_func
-
-def center_COM(xyz_obj_func, names_core_func, objeto_COM):
-    #Center the object whose xyz coordinates are given in the COM of the atomes with name objeto_COM
-    COM=np.average(xyz_obj_func[names_core_func==objeto_COM,:], axis=0)
-    for i in range(len(xyz_obj_func[:,0])):
-        xyz_obj_func[i,:]=xyz_obj_func[i,:]-COM
-    return xyz_obj_func
 
 def get_anchor(xyz_core_func, names_core_func, name_anchor_tmp):
     #Returns xyz coordinates of the anchors
@@ -191,8 +191,7 @@ def print_xyz(coordenadas, nombres, fnombre):
     output.close()
 
 names_core=change_names(names_core, core_at_name_opt, staple_at_name_opt)
-centered_core=center_COM(xyz_core, names_core, 'AU')
-xyz_stones, names_stones=place_stones(centered_core, names_core, xyz_lig, names_lig, name_anchor_opt, stones_ndx_opt)
-xyz_coated_NP, names_coated_NP=coat_NP(centered_core, names_core, xyz_stones, xyz_lig, names_lig, names_stones, stones_ndx_opt)
+xyz_stones, names_stones=place_stones(xyz_core, names_core, xyz_lig, names_lig, name_anchor_opt, stones_ndx_opt)
+xyz_coated_NP, names_coated_NP=coat_NP(xyz_core, names_core, xyz_stones, xyz_lig, names_lig, names_stones, stones_ndx_opt)
 #print_xyz(xyz_coated_NP, names_coated_NP, outname_opt)
 print_NP_pdb(xyz_coated_NP, names_coated_NP, names_stones, outname_opt)

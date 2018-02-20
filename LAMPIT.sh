@@ -1,18 +1,18 @@
 #!/bin/bash
 
 #OPTIONS FOR THE USER
-SYS_NAME="Adam"  #Prefix used for the generation of files
-LIG_MOL2="Mol-ia1_m1-c1" #mol2 file of a linear ligand with the right charges
+SYS_NAME="test"  #Prefix used for the generation of files
+LIG_MOL2="Mol-ia1_m1-c2" #mol2 file of a linear ligand with the right charges
 CORE_PDB="au144SR60"  #path to the pdb of the NP's core including the first carbon
-ANCHOR_NDX="25,16,22,43,47"  #Indexes of the atoms in LIG_MOL2 that will be aligned to the COM-C1 vector. The first index must match the index of the "ANCHOR_NAME"
+ANCHOR_NDX="0,6,12"  #Indexes of the atoms in LIG_MOL2 that will be aligned to the COM-C1 vector. The first index must match the index of the "ANCHOR_NAME"
 OLD_NAME="F00"  #Name of the ligand in LIG_MOL2
 NEW_NAME="LF1"  #New 3-letter residue name for the coating
 
 F_LEAP1="LeapLig"  #Name of the first tleap input
 F_LEAP2="LeapSys"  #Name of the second tleap input
 DEPENDS="/DATA/SoftwareSFU/IN-HOUSE/LAMPIT/DEPENDENCIES/"  #Path of the folder with LAMPIT's dependencies
-ANCHOR_NAME="C15"
-ANCHOR_H="H25,H33"
+ANCHOR_NAME="C1"
+ANCHOR_H="H1,H2"
 
 #Creates working directory and copies important files
 mkdir ${SYS_NAME}
@@ -67,4 +67,3 @@ rm -rf em.mdp md.mdp leap.log ANTECHAMBER.FRCMOD
 
 #Modifies topology file to include bonds and angles involving staple atoms
 python3.6 ${DEPENDS}/staples_topology.py -p ${SYS_NAME}/${SYS_NAME}.top -x ${SYS_NAME}/${SYS_NAME}.gro -a ${ANCHOR_NAME} -y ${ANCHOR_H} -f ${SYS_NAME}
-
