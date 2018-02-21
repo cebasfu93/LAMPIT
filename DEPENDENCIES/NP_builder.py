@@ -5,6 +5,8 @@ import os
 import sys
 from  transformations import *
 
+from mpl_toolkits.mplot3d import Axes3D
+
 #Declaration of the flags to run the script
 parser=OptionParser()
 parser.add_option("-o", "--output", action="store", type='string', dest="OutputFile", default='NP1.xyz', help="Name of the output file")
@@ -24,6 +26,24 @@ stones_ndx_opt=np.array(list(map(int, options.StonesIndexes[0].split(','))))
 core_at_name_opt=options.CoreAtomName
 staple_at_name_opt=options.StapleAtomName
 name_anchor_opt=options.AchorAtomName
+
+def get_ligand_ax(xyz_lig_func):
+    cov=np.cov(xyz_lig_func.T)
+    print(cov)
+    eigen=np.linalg.eig(cov)
+    principal=eigen[1][0]
+    print(eigen)
+
+    factor=np.linspace(-18, 18, 100)
+    fig=plt.figure()
+    ax=fig.add_subplot(111, projection='3d')
+    ax.plot(principal[0]*factor, principal[1]*factor, principal[2]*factor)
+    ax.scatter(xyz_lig_func[:,0], xyz_lig_func[:,1], xyz_lig_func[:,2])
+    ax.set_xlim((-18, 18))
+    ax.set_ylim((-10, 10))
+    ax.set_zlim((-10,10))
+    plt.show()
+    return eigen[0]
 
 def check_options(core_fname, ligand_fname, stones_fndx):
     #Checks that the required options exist and are consistent
@@ -63,7 +83,12 @@ def init_lig_mol2(ligand_fname):
             found_ATOM=1
         elif "@<TRIPOS>RESIDUECONNECT" in lig_file[i]:
             anchor_ndx_func=int(lig_file[i+1].split()[0])-1
-    return np.array(xyz_lig_func, dtype='float'), np.array(names_lig_func), anchor_ndx_func
+
+    xyz_lig_func, names_lig_func=np.array(xyz_lig_func, dtype='float'), np.array(names_lig_func)
+    COM = np.average(xyz_lig_func, axis=0)
+    for i in range(len(xyz_lig_func[:,0])):
+        xyz_lig_func[i,:]=xyz_lig_func[i,:]-COM
+    return xyz_lig_func, names_lig_func, anchor_ndx_func
 
 def init_core_pdb(core_fname):
     #Imports core pdb file. Returns xyz coordinates and names
@@ -97,10 +122,14 @@ def init_core_pdb(core_fname):
 check_options(corename_opt, ligname_opt, stones_ndx_opt)
 xyz_lig, names_lig, anchor_ndx=init_lig_mol2(ligname_opt)
 xyz_core, names_core=init_core_pdb(corename_opt)
+
+get_ligand_ax(xyz_lig)
+
 #Define number of atoms in a ligand, number of staples, and number of stones specified
 N_at_lig=len(xyz_lig[:,0])
 N_S=len(names_core[names_core=='ST'])
 N_stones=len(stones_ndx_opt)
+
 
 def get_anchor(xyz_core_func, names_core_func, name_anchor_tmp):
     #Returns xyz coordinates of the anchors
