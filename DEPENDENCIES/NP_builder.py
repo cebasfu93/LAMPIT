@@ -4,7 +4,7 @@ from optparse import OptionParser
 import os
 import sys
 from  transformations import *
-
+import random
 from mpl_toolkits.mplot3d import Axes3D
 
 #Declaration of the flags to run the script
@@ -17,33 +17,40 @@ parser.add_option("-s", "--stones", action="append", dest="StonesIndexes", defau
 parser.add_option("-n", "--nucleus", action="store", type='string', dest="CoreAtomName", default='Au', help="Name of the atoms making up the core")
 parser.add_option("-t", "--staple", action="store", type='string', dest="StapleAtomName", default='S', help="Name of the atoms making up the staples")
 parser.add_option("-a", "--anchor", action="store", type='string', dest="AchorAtomName", default='C', help="Name of the anchor atom")
-(options, args)= parser.parse_args()
-outname_opt=options.OutputFile
-corename_opt=options.CoreFile
-ligname_opt=options.LigandFile
-res_name_opt=options.ResidueName
-stones_ndx_opt=np.array(list(map(int, options.StonesIndexes[0].split(','))))
-core_at_name_opt=options.CoreAtomName
-staple_at_name_opt=options.StapleAtomName
-name_anchor_opt=options.AchorAtomName
+(options, args) = parser.parse_args()
+outname_opt = options.OutputFile
+corename_opt = options.CoreFile
+ligname_opt = options.LigandFile
+res_name_opt = options.ResidueName
+stones_ndx_opt = np.array(list(map(int, options.StonesIndexes[0].split(','))))
+core_at_name_opt = options.CoreAtomName
+staple_at_name_opt = options.StapleAtomName
+name_anchor_opt = options.AchorAtomName
 
-def get_ligand_ax(xyz_lig_func):
-    cov=np.cov(xyz_lig_func.T)
-    print(cov)
-    eigen=np.linalg.eig(cov)
-    principal=eigen[1][0]
-    print(eigen)
+def get_ligand_ax(xyz_lig_func, anchor_ndx_func):
+    pca = np.linalg.eig(np.cov(xyz_lig_func.T))
+    pca1 = pca[1][0]
+    var1 = pca[0][0]/np.sum(pca[0])*100
+    print("The PCA1 explains: " + str(round(var1,1)) + "% of the points variance")
 
-    factor=np.linspace(-18, 18, 100)
+    random.seed(666)
+    rango = list(range(len(xyz_lig_func[:,0])))
+    rango.remove(anchor_ndx_func)
+    stones_ndx = np.append(random.sample(rango, 2), anchor_ndx_func)
+
+    stones = np.multiply(np.dot(xyz_lig_func[stones_ndx], pca1), pca1)
+    print(xyz_lig_func[anchor_ndx_func,:])
+    factor = np.linspace(-18, 18, 100)
+
     fig=plt.figure()
     ax=fig.add_subplot(111, projection='3d')
-    ax.plot(principal[0]*factor, principal[1]*factor, principal[2]*factor)
+    ax.plot(pca1[0]*factor, pca1[1]*factor, pca1[2]*factor)
     ax.scatter(xyz_lig_func[:,0], xyz_lig_func[:,1], xyz_lig_func[:,2])
     ax.set_xlim((-18, 18))
     ax.set_ylim((-10, 10))
     ax.set_zlim((-10,10))
     plt.show()
-    return eigen[0]
+    return pca1
 
 def check_options(core_fname, ligand_fname, stones_fndx):
     #Checks that the required options exist and are consistent
@@ -72,22 +79,24 @@ def init_lig_mol2(ligand_fname):
     xyz_lig_func=[]
     for i in range(N_lig_file):
         if "@<TRIPOS>BOND" in lig_file[i]:
-            fin=i
+            fin = i
             found_ATOM = 0
         elif found_ATOM == 1:
             at_file=lig_file[i].split()
             names_lig_func.append(at_file[1])
             xyz_lig_func.append(at_file[2:5])
         elif "@<TRIPOS>ATOM" in lig_file[i]:
-            ini=i+1
-            found_ATOM=1
+            ini = i+1
+            found_ATOM = 1
         elif "@<TRIPOS>RESIDUECONNECT" in lig_file[i]:
             anchor_ndx_func=int(lig_file[i+1].split()[0])-1
 
     xyz_lig_func, names_lig_func=np.array(xyz_lig_func, dtype='float'), np.array(names_lig_func)
-    COM = np.average(xyz_lig_func, axis=0)
+    #COM = np.average(xyz_lig_func, axis=0)
+    anchor_pos=np.copy(xyz_lig_func)[anchor_ndx_func,:]
+
     for i in range(len(xyz_lig_func[:,0])):
-        xyz_lig_func[i,:]=xyz_lig_func[i,:]-COM
+        xyz_lig_func[i,:] = xyz_lig_func[i,:] - anchor_pos
     return xyz_lig_func, names_lig_func, anchor_ndx_func
 
 def init_core_pdb(core_fname):
@@ -101,7 +110,7 @@ def init_core_pdb(core_fname):
             if first==1:
                 ini=i
                 first=0
-    core_file=core_file[ini:ini+N_core_func]
+    core_file=core_file[ini:  ini+N_core_func]
     names_core_func=[]
     xyz_core_func=np.zeros((N_core_func,3))
     for i in range(N_core_func):
@@ -120,19 +129,24 @@ def init_core_pdb(core_fname):
     return xyz_core_func, names_core_func
 
 check_options(corename_opt, ligname_opt, stones_ndx_opt)
-xyz_lig, names_lig, anchor_ndx=init_lig_mol2(ligname_opt)
-xyz_core, names_core=init_core_pdb(corename_opt)
+xyz_lig, names_lig, anchor_ndx = init_lig_mol2(ligname_opt)
+xyz_core, names_core = init_core_pdb(corename_opt)
 
-get_ligand_ax(xyz_lig)
+lig_ax = get_ligand_ax(xyz_lig, anchor_ndx)
 
 #Define number of atoms in a ligand, number of staples, and number of stones specified
-N_at_lig=len(xyz_lig[:,0])
-N_S=len(names_core[names_core=='ST'])
-N_stones=len(stones_ndx_opt)
+N_at_lig = len(xyz_lig[:,0])
+N_S = len(names_core[names_core=='ST'])
+N_stones = len(stones_ndx_opt)
+
+def coat2_NP(lig_ax_func, xyz_lig_func, anchor_ndx_func, xyz_core_func, name_anchor_func):
+    stones_old=np.array([1.0, 2.0, 3.0])
+    anchor_=np.dot(lig_ax_func, xyz_lig_func[anchor_ndx_func])*lig_ax_func
+
 
 
 def get_anchor(xyz_core_func, names_core_func, name_anchor_tmp):
-    #Returns xyz coordinates of the anchors
+    #Returns xyz coordinates of the anchors from the core pdb
     return xyz_core_func[names_core_func==name_anchor_tmp,:]
 
 def get_stone(xyz_stones_tmp, xyz_lig_tmp, stone_ndx, stones_ndx_func):
@@ -142,9 +156,9 @@ def get_stone(xyz_stones_tmp, xyz_lig_tmp, stone_ndx, stones_ndx_func):
     return scaling*xyz_stones_tmp
 
 def get_stones_mol2(xyz_lig_func, ndx_stones_func):
-    xyz_stones_mol2_func=np.zeros((N_stones,3))
+    xyz_stones_mol2_func = np.zeros((N_stones,3))
     for i in range(len(ndx_stones_func)):
-        xyz_stones_mol2_func[i,:]=xyz_lig_func[ndx_stones_func[i],:]
+        xyz_stones_mol2_func[i,:] = xyz_lig_func[ndx_stones_func[i],:]
     return xyz_stones_mol2_func
 
 def place_stones(xyz_core_func, names_core_func, xyz_lig_func, names_lig_func, name_anchor_func, stones_ndx_func):
