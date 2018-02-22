@@ -14,7 +14,8 @@ NEW_NAME2="LF2"
 
 CORENAME="Au"
 STAPLENAME="S"
-MORPHOLOGY="RANDOM"
+MORPHOLOGY="random"
+FRAC_LIG1="0.3"
 RSEED="666"
 
 F_LEAP1="LeapLig"  #Name of the first tleap input
@@ -44,6 +45,7 @@ echo "ligname2 \t ${NEW_NAME2}" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "ligand1 \t ${SYS_NAME}/${NEW_NAME1}.mol2" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "ligand2 \t ${SYS_NAME}/${NEW_NAME2}.mol2" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "morphology \t ${MORPHOLOGY}" >> ${SYS_NAME}/${F_NPBUILDER}.in
+echo "frac_lig1 \t ${FRAC_LIG1}" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "rseed \t ${RSEED}" >> ${SYS_NAME}/${F_NPBUILDER}.in
 
 #STONES THE SPECIFIED ATOMS OF THE LIGAND TO THE SULPHURS OF THE NP

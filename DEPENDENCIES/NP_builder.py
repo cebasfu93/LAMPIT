@@ -19,6 +19,7 @@ res_name1_opt = "UNK"
 res_name2_opt = "UNK"
 ligname1_opt = "Ligand1.mol2"
 ligname2_opt = "Ligand2.mol2"
+frac_lig1_opt = 0.5
 morph_opt = "random"
 rseed_opt = 666
 
@@ -51,13 +52,15 @@ def load_options(input_file):
         elif "morphology" in input_file[i]:
             global morph_opt
             morph_opt = input_file[i][1]
+        elif "frac_lig1" in input_file[i]:
+            global frac_lig1_opt
+            frac_lig1_opt = float(input_file[i][1])
         elif "rseed" in input_file[i]:
             global rseed_opt
-            rseed_opt = input_file[i][1]
+            rseed_opt = int(input_file[i][1])
 
 load_options(inp)
 
-"""
 def check_options(core_fname, ligand_fname1, ligand_fname2):
     #Checks that the required options exist and are consistent
     if not (os.path.isfile(core_fname)):
@@ -151,7 +154,7 @@ def get_ligand_pill(xyz_lig_func, anchor_ndx_func):
         pillars_func = np.vstack((pillars_func, np.dot(xyz_lig_func[i], pca1) * pca1))
     return pillars_func
 
-check_options(corename_opt, ligname1_opt)
+check_options(corename_opt, ligname1_opt, ligname2_opt)
 
 xyz_lig1, names_lig1, anchor_ndx1 = init_lig_mol2(ligname1_opt)
 xyz_lig2, names_lig2, anchor_ndx2 = init_lig_mol2(ligname2_opt)
@@ -166,20 +169,36 @@ N_at_lig1 = len(xyz_lig1[:,0])
 N_at_lig2 = len(xyz_lig2[:,0])
 N_S = len(names_core[names_core=='ST'])
 
-def get_stones(xyz_core_func, names_core_func, xyz_pillars_func1, xyz_pillars_func2):
+def assign_morph(xyz_core_func, names_core_func):
+    xyz_anchors_func = xyz_core_func[names_core_func==name_anchor_opt,:]
+    N_anchors = len(xyz_anchors_func)
+    for_lig1 = round(N_anchors*frac_lig1_opt)
+    indexes = list(range(N_anchors))
+    if morph_opt == "random":
+        random.seed(rseed_opt)
+        random.shuffle(indexes)
+        lig1_ndx = indexes[:for_lig1]
+        lig2_ndx = indexes[for_lig1:]
+        xyz_anchors1_func=xyz_anchors_func[lig1_ndx,:]
+        xyz_anchors2_func=xyz_anchors_func[lig2_ndx,:]
+    else:
+        print("Morphology not supported")
+    return xyz_anchors1_func, xyz_anchors2_func
+
+def get_stones(xyz_anchorsi_func, xyz_pillarsi_func):
     #Return a 3D array with the xyz coordinates for all the stones of all the anchors
-    xyz_anchors = xyz_core_func[names_core_func==name_anchor_opt,:]
-    n_stones_lig = len(xyz_pillars_func)
-    xyz_stones = np.zeros((N_S, n_stones_lig, 3))
+    n_stones_lig = len(xyz_pillarsi_func)
+    n_anchors = len(xyz_anchorsi_func)
+    xyz_stones = np.zeros((n_anchors, n_stones_lig, 3))
 
     #Takes the COM-C vectors and scale them to match the distance between staples in the ligand's file
-    for i in range(N_S):
-        mag_C = np.linalg.norm(xyz_anchors[i,:])
+    for i in range(n_stones_lig):
+        mag_C = np.linalg.norm(xyz_anchorsi_func[i,:])
         for j in range(n_stones_lig):
-            scaling = (mag_C + np.linalg.norm(xyz_pillars_func[j,:]))/mag_C
-            xyz_stones[i,j,:]=xyz_anchors[i,:]*scaling
+            scaling = (mag_C + np.linalg.norm(xyz_pillarsi_func[j,:]))/mag_C
+            xyz_stones[i,j,:]=xyz_anchorsi_func[i,:]*scaling
     return xyz_stones
-
+"""
 def coat_NP(xyz_core_func, names_core_func, xyz_lig_func, names_lig_func, xyz_pillars_func, xyz_stones_func):
     #Merges xyz coordinates and names of the core and the ligands into one coated NP
     keep_rows=[]
@@ -240,8 +259,14 @@ def print_xyz(coordenadas, nombres, fnombre):
     for i in range(len(nombres)):
         output.write(str(nombres[i]) + " " + str(coordenadas[i,0]) + " " + str(coordenadas[i,1]) + " " + str(coordenadas[i,2]) + "\n")
     output.close()
+"""
+xyz_anchors1, xyz_anchors2 = assign_morph(xyz_core, names_core)
 
-new_stones = get_stones(xyz_core, names_core, xyz_pillars)
+xyz_stones1 = get_stones(xyz_anchors1, xyz_pillars1)
+xyz_stones2 = get_stones(xyz_anchors2, xyz_pillars2)
+
+print(np.shape(xyz_stones1), np.shape(xyz_stones2))
+"""
 xyz_coated_NP, names_coated_NP = coat_NP(xyz_core, names_core, xyz_lig, names_lig, xyz_pillars, new_stones)
 print_NP_pdb(xyz_coated_NP, names_coated_NP, outname_opt)
 #print_xyz(xyz_coated_NP, names_coated_NP, outname_opt)
