@@ -9,7 +9,7 @@ import random
 
 #Declaration of the flags to run the script
 parser=OptionParser()
-parser.add_option("-o", "--output", action="store", type='string', dest="OutputFile", default='NP1.xyz', help="Name of the output file")
+parser.add_option("-o", "--output", action="store", type='string', dest="OutputFile", default='NP1.pdb', help="Name of the output file")
 parser.add_option("-c", "--core", action="store", type='string', dest="CoreFile", default='core1.pdb', help="Name of the pdb core file (includes S and anchor atom)")
 parser.add_option("-l", "--ligand", action="store", type='string', dest="LigandFile", default='ligand.mol2', help="Name of the mol2 uncapped ligand file")
 parser.add_option("-r", "--resname", action="store", type='string', dest="ResidueName", default='UNK', help="3-letter name to give to the coating ligand")
@@ -24,21 +24,6 @@ res_name_opt = options.ResidueName
 core_at_name_opt = options.CoreAtomName
 staple_at_name_opt = options.StapleAtomName
 name_anchor_opt = options.AchorAtomName
-
-def get_ligand_pill(xyz_lig_func, anchor_ndx_func):
-    pca = np.linalg.eig(np.cov(xyz_lig_func.T))
-    pca1 = pca[1][0]
-    var1 = pca[0][0]/np.sum(pca[0])*100
-    print("The PCA1 explains: " + str(round(var1,1)) + "% of the points variance")
-
-    random.seed(666)
-    rango = list(range(len(xyz_lig_func[:,0])))
-    rango.remove(anchor_ndx_func)
-    pillars_ndx = random.sample(rango, 2)
-    pillars_func = np.array([0.0, 0.0, 0.0])
-    for i in pillars_ndx:
-        pillars_func = np.vstack((pillars_func, np.dot(xyz_lig_func[i], pca1) * pca1))
-    return pillars_func
 
 def check_options(core_fname, ligand_fname):
     #Checks that the required options exist and are consistent
@@ -57,7 +42,7 @@ def change_names(names_core_func):
     return names_core_func
 
 def init_lig_mol2(ligand_fname):
-    #Imports ligand mol2 file. Returns xyz coordinates and names
+    #Imports ligand mol2 file. Returns xyz coordinates, names, and index corresponding to the anchor
     lig_file=np.genfromtxt(ligand_fname, delimiter='\n', dtype='str')
     N_lig_file=len(lig_file)
     found_ATOM=0
@@ -80,12 +65,13 @@ def init_lig_mol2(ligand_fname):
     xyz_lig_func, names_lig_func=np.array(xyz_lig_func, dtype='float'), np.array(names_lig_func)
     anchor_pos=np.copy(xyz_lig_func)[anchor_ndx_func,:]
 
+    #Moves the ligand so that the anchor is in (0,0,0)
     for i in range(len(xyz_lig_func[:,0])):
         xyz_lig_func[i,:] = xyz_lig_func[i,:] - anchor_pos
     return xyz_lig_func, names_lig_func, anchor_ndx_func
 
 def init_core_pdb(core_fname):
-    #Imports core pdb file. Returns xyz coordinates and names
+    #Imports core pdb file. Centers the core in (0,0,0) and returns xyz coordinates and names
     core_file=np.genfromtxt(core_fname, delimiter='\n', dtype=str)
     first=1
     N_core_func=0
@@ -113,10 +99,26 @@ def init_core_pdb(core_fname):
         xyz_core_func[i,:]=xyz_core_func[i,:]-COM
     return xyz_core_func, names_core_func
 
+def get_ligand_pill(xyz_lig_func, anchor_ndx_func):
+    #Runs a PCA and takes the first eigenvector as the best fitting line.
+    pca = np.linalg.eig(np.cov(xyz_lig_func.T))
+    pca1 = pca[1][0]
+    var1 = pca[0][0]/np.sum(pca[0])*100
+    print("The PCA1 explains: {:.1f}% of the points variance".format(var1))
+
+    #Randomly takes 2 other atoms in the ligand and project their positions in PCA1
+    random.seed(666)
+    rango = list(range(len(xyz_lig_func[:,0])))
+    rango.remove(anchor_ndx_func)
+    pillars_ndx = random.sample(rango, 2)
+    pillars_func = np.array([0.0, 0.0, 0.0]) #This corresponds to the first stone (i.e. the anchor) which will always be in (0,0,0)
+    for i in pillars_ndx:
+        pillars_func = np.vstack((pillars_func, np.dot(xyz_lig_func[i], pca1) * pca1))
+    return pillars_func
+
 check_options(corename_opt, ligname_opt)
 xyz_lig, names_lig, anchor_ndx = init_lig_mol2(ligname_opt)
 xyz_core, names_core = init_core_pdb(corename_opt)
-
 xyz_pillars = get_ligand_pill(xyz_lig, anchor_ndx)
 
 #Define number of atoms in a ligand, number of staples, and number of stones specified
@@ -124,10 +126,12 @@ N_at_lig = len(xyz_lig[:,0])
 N_S = len(names_core[names_core=='ST'])
 
 def get_stones(xyz_core_func, names_core_func, xyz_pillars_func):
+    #Return a 3D array with the xyz coordinates for all the stones of all the anchors
     xyz_anchors = xyz_core_func[names_core_func==name_anchor_opt,:]
     n_stones_lig = len(xyz_pillars_func)
     xyz_stones = np.zeros((N_S, n_stones_lig, 3))
 
+    #Takes the COM-C vectors and scale them to match the distance between staples in the ligand's file
     for i in range(N_S):
         mag_C = np.linalg.norm(xyz_anchors[i,:])
         for j in range(n_stones_lig):
@@ -135,19 +139,15 @@ def get_stones(xyz_core_func, names_core_func, xyz_pillars_func):
             xyz_stones[i,j,:]=xyz_anchors[i,:]*scaling
     return xyz_stones
 
-new_stones = get_stones(xyz_core, names_core, xyz_pillars)
-
-def new_coat_NP(xyz_core_func, names_core_func, xyz_lig_func, names_lig_func, xyz_pillars_func, xyz_stones_func):
+def coat_NP(xyz_core_func, names_core_func, xyz_lig_func, names_lig_func, xyz_pillars_func, xyz_stones_func):
     #Merges xyz coordinates and names of the core and the ligands into one coated NP
     keep_rows=[]
     for i in range(len(names_core_func)):
         if names_core_func[i]=='AU' or names_core_func[i]=='ST':
             keep_rows.append(i)
-    xyz_naked_func=xyz_core_func[keep_rows,:]
-    names_naked_func=names_core_func[keep_rows]
 
-    xyz_coated_func=xyz_naked_func
-    names_coated_func=names_naked_func
+    xyz_coated_func=xyz_core_func[keep_rows,:]
+    names_coated_func=names_core_func[keep_rows]
 
     xyz_lig_func_conv=np.insert(xyz_lig_func, 3, 1, axis=1).T
     for i in range(N_S):
@@ -157,15 +157,7 @@ def new_coat_NP(xyz_core_func, names_core_func, xyz_lig_func, names_lig_func, xy
 
         xyz_coated_func=np.append(xyz_coated_func, trans_lig, axis=0)
         names_coated_func=np.append(names_coated_func, names_lig_func, axis=0)
-
-    """fig=plt.figure()
-    ax=fig.add_subplot(111, projection='3d')
-    ax.scatter(xyz_coated_func[:,0], xyz_coated_func[:,1], xyz_coated_func[:,2])
-    ax.set_aspect('equal')
-    plt.show()"""
     return xyz_coated_func, names_coated_func
-
-xyz_coated_NP, names_coated_NP = new_coat_NP(xyz_core, names_core, xyz_lig, names_lig, xyz_pillars, new_stones)
 
 def print_NP_pdb(xyz_coated_func, names_coated_func, out_fname):
     #Writes the pdb of the core and the placed stones
@@ -208,5 +200,7 @@ def print_xyz(coordenadas, nombres, fnombre):
         output.write(str(nombres[i]) + " " + str(coordenadas[i,0]) + " " + str(coordenadas[i,1]) + " " + str(coordenadas[i,2]) + "\n")
     output.close()
 
-#print_xyz(xyz_coated_NP, names_coated_NP, outname_opt)
+new_stones = get_stones(xyz_core, names_core, xyz_pillars)
+xyz_coated_NP, names_coated_NP = coat_NP(xyz_core, names_core, xyz_lig, names_lig, xyz_pillars, new_stones)
 print_NP_pdb(xyz_coated_NP, names_coated_NP, outname_opt)
+#print_xyz(xyz_coated_NP, names_coated_NP, outname_opt)
