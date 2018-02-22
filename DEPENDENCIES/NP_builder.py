@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from optparse import OptionParser
+import argparse
 import os
 import sys
 from  transformations import *
@@ -8,29 +8,64 @@ import random
 #from mpl_toolkits.mplot3d import Axes3D
 
 #Declaration of the flags to run the script
-parser=OptionParser()
-parser.add_option("-o", "--output", action="store", type='string', dest="OutputFile", default='NP1.pdb', help="Name of the output file")
-parser.add_option("-c", "--core", action="store", type='string', dest="CoreFile", default='core1.pdb', help="Name of the pdb core file (includes S and anchor atom)")
-parser.add_option("-l", "--ligand", action="store", type='string', dest="LigandFile", default='ligand.mol2', help="Name of the mol2 uncapped ligand file")
-parser.add_option("-r", "--resname", action="store", type='string', dest="ResidueName", default='UNK', help="3-letter name to give to the coating ligand")
-parser.add_option("-n", "--nucleus", action="store", type='string', dest="CoreAtomName", default='Au', help="Name of the atoms making up the core")
-parser.add_option("-t", "--staple", action="store", type='string', dest="StapleAtomName", default='S', help="Name of the atoms making up the staples")
-parser.add_option("-a", "--anchor", action="store", type='string', dest="AchorAtomName", default='C', help="Name of the anchor atom")
-(options, args) = parser.parse_args()
-outname_opt = options.OutputFile
-corename_opt = options.CoreFile
-ligname_opt = options.LigandFile
-res_name_opt = options.ResidueName
-core_at_name_opt = options.CoreAtomName
-staple_at_name_opt = options.StapleAtomName
-name_anchor_opt = options.AchorAtomName
 
-def check_options(core_fname, ligand_fname):
+inp=np.genfromtxt(sys.argv[1], dtype="str")
+outname_opt = "Output.pdb"
+corename_opt = "Core.pdb"
+core_at_name_opt = "Au"
+staple_at_name_opt = "S"
+name_anchor_opt = "C"
+res_name1_opt = "UNK"
+res_name2_opt = "UNK"
+ligname1_opt = "Ligand1.mol2"
+ligname2_opt = "Ligand2.mol2"
+morph_opt = "random"
+rseed_opt = 666
+
+def load_options(input_file):
+    for i in range(len(input_file)):
+        if "output" in input_file[i]:
+            global outname_opt
+            outname_opt = input_file[i][1]
+        elif "core" in input_file[i]:
+            global corename_opt
+            corename_opt = input_file[i][1]
+        elif "corename" in input_file[i]:
+            global core_at_name_opt
+            core_at_name_opt = input_file[i][1]
+        elif "staplename" in input_file[i]:
+            global staple_at_name_opt
+            staple_at_name_opt = input_file[i][1]
+        elif "ligname1" in input_file[i]:
+            global ligname1_opt
+            res_name1_opt = input_file[i][1]
+        elif "ligname2" in input_file[i]:
+            global ligname2_opt
+            res_name2_opt = input_file[i][1]
+        elif "ligand1" in input_file[i]:
+            global ligname1_opt
+            ligname1_opt = input_file[i][1]
+        elif "ligand2" in input_file[i]:
+            global ligname2_opt
+            ligname2_opt = input_file[i][1]
+        elif "morphology" in input_file[i]:
+            global morph_opt
+            morph_opt = input_file[i][1]
+        elif "rseed" in input_file[i]:
+            global rseed_opt
+            rseed_opt = input_file[i][1]
+
+load_options(inp)
+
+"""
+def check_options(core_fname, ligand_fname1, ligand_fname2):
     #Checks that the required options exist and are consistent
     if not (os.path.isfile(core_fname)):
         sys.exit("Core file could not be found")
-    if not (os.path.isfile(ligand_fname)):
-        sys.exit("Ligand file could not be found")
+    if not (os.path.isfile(ligand_fname1)):
+        sys.exit("Ligand file 1 could not be found")
+    if not (os.path.isfile(ligand_fname2)):
+        sys.exit("Ligand file 2 could not be found")
 
 def change_names(names_core_func):
     #Changes the name of the original atoms in the core for AU, and the staples for ST. This names are required for the rest of LAMPIT
@@ -116,16 +151,22 @@ def get_ligand_pill(xyz_lig_func, anchor_ndx_func):
         pillars_func = np.vstack((pillars_func, np.dot(xyz_lig_func[i], pca1) * pca1))
     return pillars_func
 
-check_options(corename_opt, ligname_opt)
-xyz_lig, names_lig, anchor_ndx = init_lig_mol2(ligname_opt)
+check_options(corename_opt, ligname1_opt)
+
+xyz_lig1, names_lig1, anchor_ndx1 = init_lig_mol2(ligname1_opt)
+xyz_lig2, names_lig2, anchor_ndx2 = init_lig_mol2(ligname2_opt)
+
 xyz_core, names_core = init_core_pdb(corename_opt)
-xyz_pillars = get_ligand_pill(xyz_lig, anchor_ndx)
+
+xyz_pillars1 = get_ligand_pill(xyz_lig1, anchor_ndx1)
+xyz_pillars2 = get_ligand_pill(xyz_lig2, anchor_ndx2)
 
 #Define number of atoms in a ligand, number of staples, and number of stones specified
-N_at_lig = len(xyz_lig[:,0])
+N_at_lig1 = len(xyz_lig1[:,0])
+N_at_lig2 = len(xyz_lig2[:,0])
 N_S = len(names_core[names_core=='ST'])
 
-def get_stones(xyz_core_func, names_core_func, xyz_pillars_func):
+def get_stones(xyz_core_func, names_core_func, xyz_pillars_func1, xyz_pillars_func2):
     #Return a 3D array with the xyz coordinates for all the stones of all the anchors
     xyz_anchors = xyz_core_func[names_core_func==name_anchor_opt,:]
     n_stones_lig = len(xyz_pillars_func)
@@ -204,3 +245,4 @@ new_stones = get_stones(xyz_core, names_core, xyz_pillars)
 xyz_coated_NP, names_coated_NP = coat_NP(xyz_core, names_core, xyz_lig, names_lig, xyz_pillars, new_stones)
 print_NP_pdb(xyz_coated_NP, names_coated_NP, outname_opt)
 #print_xyz(xyz_coated_NP, names_coated_NP, outname_opt)
+"""
