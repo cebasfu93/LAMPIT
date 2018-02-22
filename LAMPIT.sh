@@ -4,7 +4,6 @@
 SYS_NAME="test"  #Prefix used for the generation of files
 LIG_MOL2="Mol-ia1_m1-c2" #mol2 file of a linear ligand with the right charges
 CORE_PDB="au144SR60"  #path to the pdb of the NP's core including the first carbon
-ANCHOR_NDX="0,6,12"  #Indexes of the atoms in LIG_MOL2 that will be aligned to the COM-C1 vector. The first index must match the index of the "ANCHOR_NAME"
 OLD_NAME="F00"  #Name of the ligand in LIG_MOL2
 NEW_NAME="LF1"  #New 3-letter residue name for the coating
 
@@ -23,7 +22,7 @@ cp LAMPIT.sh ${SYS_NAME}/LAMPIT-run.sh
 sed  s"/${OLD_NAME}/${NEW_NAME}/" ${SYS_NAME}/${LIG_MOL2}.mol2 > ${SYS_NAME}/${NEW_NAME}.mol2
 
 #STONES THE SPECIFIED ATOMS OF THE LIGAND TO THE SULPHURS OF THE NP
-python3.6 ${DEPENDS}/NP_builder.py -l ${SYS_NAME}/${NEW_NAME}.mol2 -c ${SYS_NAME}/${CORE_PDB}.pdb -o ${SYS_NAME}/${SYS_NAME}_stoned.pdb -r ${NEW_NAME} -s ${ANCHOR_NDX}
+python3.6 ${DEPENDS}/NP_builder.py -l ${SYS_NAME}/${NEW_NAME}.mol2 -c ${SYS_NAME}/${CORE_PDB}.pdb -o ${SYS_NAME}/${SYS_NAME}_stoned.pdb -r ${NEW_NAME}
 
 #WRITED FILE WITH THE FF PARAMETERS FOR THE LIGAND
 parmchk2 -i ${SYS_NAME}/${NEW_NAME}.mol2 -f mol2 -o ${SYS_NAME}/${NEW_NAME}.frcmod -a y
