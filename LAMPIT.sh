@@ -4,18 +4,19 @@
 SYS_NAME="test"  #Prefix used for the generation of files
 CORE_PDB="au144SR60"  #path to the pdb of the NP's core including the first carbon
 
-MOL2_LIG1="LF1" #mol2 file of a linear ligand with the right charges
-OLD_NAME1="F00"  #Name of the ligand in LIG_MOL2
-NEW_NAME1="LF1"  #New 3-letter residue name for the coating
+MOL2_LIG1="LF1" #mol2 file of a linear ligand 1 with the right charges
+OLD_NAME1="F00"  #Name of the ligand 1 in MOL2_LIG1
+NEW_NAME1="LF1"  #New 3-letter residue name for ligand 1
 
-MOL2_LIG2="LF2"
-OLD_NAME2="F00"
-NEW_NAME2="LF2"
+MOL2_LIG2="LF2" #mol2 file of a linear ligand 2 with the right charges
+OLD_NAME2="F00"  #Name of the ligand 2 in MOL2_LIG1
+NEW_NAME2="LF2"  #New 3-letter residue name for ligand 2
 
-CORENAME="Au"
-STAPLENAME="S"
+CORENAME="Au"  #Name core atom in CORE_PDB
+STAPLENAME="S" #N
+COREANCHOR="C"
 MORPHOLOGY="random"
-FRAC_LIG1="0.3"
+FRAC_LIG1="0.7"
 RSEED="666"
 
 F_LEAP1="LeapLig"  #Name of the first tleap input
@@ -40,6 +41,7 @@ echo "output \t ${SYS_NAME}/${SYS_NAME}_stoned.pdb" > ${SYS_NAME}/${F_NPBUILDER}
 echo "core \t ${SYS_NAME}/${CORE_PDB}.pdb" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "corename \t ${CORENAME}" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "staplename \t ${STAPLENAME}" >> ${SYS_NAME}/${F_NPBUILDER}.in
+echo "coreanchor \t ${COREANCHOR}" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "ligname1 \t ${NEW_NAME1}" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "ligname2 \t ${NEW_NAME2}" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "ligand1 \t ${SYS_NAME}/${NEW_NAME1}.mol2" >> ${SYS_NAME}/${F_NPBUILDER}.in

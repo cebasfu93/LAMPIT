@@ -5,7 +5,7 @@ import os
 import sys
 from  transformations import *
 import random
-#from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import Axes3D
 
 #Declaration of the flags to run the script
 
@@ -37,11 +37,14 @@ def load_options(input_file):
         elif "staplename" in input_file[i]:
             global staple_at_name_opt
             staple_at_name_opt = input_file[i][1]
+        elif "coreanchor" in input_file[i]:
+            global name_anchor_opt
+            name_anchor_opt = input_file[i][1]
         elif "ligname1" in input_file[i]:
-            global ligname1_opt
+            global res_name1_opt
             res_name1_opt = input_file[i][1]
         elif "ligname2" in input_file[i]:
-            global ligname2_opt
+            global res_name2_opt
             res_name2_opt = input_file[i][1]
         elif "ligand1" in input_file[i]:
             global ligname1_opt
@@ -192,14 +195,14 @@ def get_stones(xyz_anchorsi_func, xyz_pillarsi_func):
     xyz_stones = np.zeros((n_anchors, n_stones_lig, 3))
 
     #Takes the COM-C vectors and scale them to match the distance between staples in the ligand's file
-    for i in range(n_stones_lig):
+    for i in range(n_anchors):
         mag_C = np.linalg.norm(xyz_anchorsi_func[i,:])
         for j in range(n_stones_lig):
             scaling = (mag_C + np.linalg.norm(xyz_pillarsi_func[j,:]))/mag_C
             xyz_stones[i,j,:]=xyz_anchorsi_func[i,:]*scaling
     return xyz_stones
-"""
-def coat_NP(xyz_core_func, names_core_func, xyz_lig_func, names_lig_func, xyz_pillars_func, xyz_stones_func):
+
+def coat_NP(xyz_core_func, names_core_func, xyz_lig1_func, names_lig1_func, xyz_pillars1_func, xyz_stones1_func, xyz_lig2_func, names_lig2_func, xyz_pillars2_func, xyz_stones2_func):
     #Merges xyz coordinates and names of the core and the ligands into one coated NP
     keep_rows=[]
     for i in range(len(names_core_func)):
@@ -209,33 +212,60 @@ def coat_NP(xyz_core_func, names_core_func, xyz_lig_func, names_lig_func, xyz_pi
     xyz_coated_func=xyz_core_func[keep_rows,:]
     names_coated_func=names_core_func[keep_rows]
 
-    xyz_lig_func_conv=np.insert(xyz_lig_func, 3, 1, axis=1).T
-    for i in range(N_S):
-        xyz_stones_now = xyz_stones_func[i,:,:]
-        trans_matrix=affine_matrix_from_points(xyz_pillars_func.T, xyz_stones_now.T, shear=False, scale=False, usesvd=True)
-        trans_lig=np.dot(trans_matrix, xyz_lig_func_conv).T[:,:3]
+    xyz_lig1_func_conv=np.insert(xyz_lig1_func, 3, 1, axis=1).T
+    for i in range(len(xyz_stones1_func[:,0,0])):
+        xyz_stones_now = xyz_stones1_func[i,:,:]
+        trans_matrix=affine_matrix_from_points(xyz_pillars1_func.T, xyz_stones_now.T, shear=False, scale=False, usesvd=True)
+        trans_lig=np.dot(trans_matrix, xyz_lig1_func_conv).T[:,:3]
 
         xyz_coated_func=np.append(xyz_coated_func, trans_lig, axis=0)
-        names_coated_func=np.append(names_coated_func, names_lig_func, axis=0)
+        names_coated_func=np.append(names_coated_func, names_lig1_func, axis=0)
+
+    xyz_lig2_func_conv=np.insert(xyz_lig2_func, 3, 1, axis=1).T
+    for i in range(len(xyz_stones2_func[:,0,0])):
+        xyz_stones_now = xyz_stones2_func[i,:,:]
+        trans_matrix=affine_matrix_from_points(xyz_pillars2_func.T, xyz_stones_now.T, shear=False, scale=False, usesvd=True)
+        trans_lig=np.dot(trans_matrix, xyz_lig2_func_conv).T[:,:3]
+
+        xyz_coated_func=np.append(xyz_coated_func, trans_lig, axis=0)
+        names_coated_func=np.append(names_coated_func, names_lig2_func, axis=0)
     return xyz_coated_func, names_coated_func
 
-def print_NP_pdb(xyz_coated_func, names_coated_func, out_fname):
+def print_NP_pdb(xyz_coated_func, names_coated_func, xyz_anchors1_func, xyz_anchors2_func, out_fname):
     #Writes the pdb of the core and the placed stones
-    output=open(out_fname, "w")
+    N_lig1 = len(xyz_anchors1)
+    N_tot_lig1 = N_lig1 * N_at_lig1
+    N_lig2 = len(xyz_anchors2)
+    N_tot_lig2 = N_lig2 * N_at_lig2
+    N_core = len(xyz_coated_func) - N_lig1*N_at_lig1 - N_lig2*N_at_lig2
+
     res=0
     at=0
-    lig_atoms=0
-    for i in range(len(names_coated_func)):
+    output=open(out_fname, "w")
+    for i in range(N_core):
         at+=1
+        res+=1
         at_name_act=names_coated_func[i]
-        if at_name_act=='AU' or at_name_act=='ST':
+        write_pdb_block(at_name_act, at_name_act, xyz_coated_func[i,:], res, at, out_fname)
+
+    lig_atoms=0
+    for i in range(N_tot_lig1):
+        at+=1
+        at_name_act=names_coated_func[i+N_core]
+        if(lig_atoms%N_at_lig1==0):
             res+=1
-            write_pdb_block(at_name_act, at_name_act, xyz_coated_func[i,:], res, at, out_fname)
-        else:
-            if(lig_atoms%N_at_lig==0):
-                res+=1
-            lig_atoms+=1
-            write_pdb_block(at_name_act, res_name_opt, xyz_coated_func[i,:], res, at, out_fname)
+        lig_atoms+=1
+        write_pdb_block(at_name_act, res_name1_opt, xyz_coated_func[i+N_core,:], res, at, out_fname)
+
+    lig_atoms=0
+    for i in range(N_tot_lig2):
+        at+=1
+        at_name_act=names_coated_func[i+N_core+N_tot_lig1]
+        if(lig_atoms%N_at_lig2==0):
+            res+=1
+        lig_atoms+=1
+        write_pdb_block(at_name_act, res_name2_opt, xyz_coated_func[i+N_core+N_tot_lig1,:], res, at, out_fname)
+
     output.close()
 
 def write_pdb_block(atname_func, res_name_func, xyz_func, resnum, atnum, out_filename):
@@ -259,15 +289,13 @@ def print_xyz(coordenadas, nombres, fnombre):
     for i in range(len(nombres)):
         output.write(str(nombres[i]) + " " + str(coordenadas[i,0]) + " " + str(coordenadas[i,1]) + " " + str(coordenadas[i,2]) + "\n")
     output.close()
-"""
+
 xyz_anchors1, xyz_anchors2 = assign_morph(xyz_core, names_core)
 
 xyz_stones1 = get_stones(xyz_anchors1, xyz_pillars1)
 xyz_stones2 = get_stones(xyz_anchors2, xyz_pillars2)
 
-print(np.shape(xyz_stones1), np.shape(xyz_stones2))
-"""
-xyz_coated_NP, names_coated_NP = coat_NP(xyz_core, names_core, xyz_lig, names_lig, xyz_pillars, new_stones)
-print_NP_pdb(xyz_coated_NP, names_coated_NP, outname_opt)
+xyz_coated_NP, names_coated_NP = coat_NP(xyz_core, names_core, xyz_lig1, names_lig1, xyz_pillars1, xyz_stones1, xyz_lig2, names_lig2, xyz_pillars2, xyz_stones2)
+
+print_NP_pdb(xyz_coated_NP, names_coated_NP, xyz_anchors1, xyz_anchors2, outname_opt)
 #print_xyz(xyz_coated_NP, names_coated_NP, outname_opt)
-"""
