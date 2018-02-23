@@ -7,9 +7,10 @@ from  transformations import *
 import random
 from mpl_toolkits.mplot3d import Axes3D
 
-#Declaration of the flags to run the script
-
+#Imports input file with options
 inp=np.genfromtxt(sys.argv[1], dtype="str")
+
+#Declaration of the flags to run the script
 outname_opt = "Output.pdb"
 corename_opt = "Core.pdb"
 core_at_name_opt = "Au"
@@ -24,6 +25,7 @@ morph_opt = "random"
 rseed_opt = 666
 
 def load_options(input_file):
+    #Reads the input file with the options (case sensitive) and globally change the values of the variables storing them
     for i in range(len(input_file)):
         if "output" in input_file[i]:
             global outname_opt
@@ -145,7 +147,7 @@ def get_ligand_pill(xyz_lig_func, anchor_ndx_func):
     pca = np.linalg.eig(np.cov(xyz_lig_func.T))
     pca1 = pca[1][0]
     var1 = pca[0][0]/np.sum(pca[0])*100
-    print("The PCA1 explains: {:.1f}% of the points variance".format(var1))
+    print("PCA1 explains: {:.1f}% of the points' variance".format(var1))
 
     #Randomly takes 2 other atoms in the ligand and project their positions in PCA1
     random.seed(666)
@@ -173,6 +175,7 @@ N_at_lig2 = len(xyz_lig2[:,0])
 N_S = len(names_core[names_core=='ST'])
 
 def assign_morph(xyz_core_func, names_core_func):
+    #Distributes all the anchors in lig1 and lig2 dependending in the specified morphology
     xyz_anchors_func = xyz_core_func[names_core_func==name_anchor_opt,:]
     N_anchors = len(xyz_anchors_func)
     for_lig1 = round(N_anchors*frac_lig1_opt)
@@ -212,6 +215,7 @@ def coat_NP(xyz_core_func, names_core_func, xyz_lig1_func, names_lig1_func, xyz_
     xyz_coated_func=xyz_core_func[keep_rows,:]
     names_coated_func=names_core_func[keep_rows]
 
+    #Transforms and appends rototranslated ligand 1
     xyz_lig1_func_conv=np.insert(xyz_lig1_func, 3, 1, axis=1).T
     for i in range(len(xyz_stones1_func[:,0,0])):
         xyz_stones_now = xyz_stones1_func[i,:,:]
@@ -221,6 +225,7 @@ def coat_NP(xyz_core_func, names_core_func, xyz_lig1_func, names_lig1_func, xyz_
         xyz_coated_func=np.append(xyz_coated_func, trans_lig, axis=0)
         names_coated_func=np.append(names_coated_func, names_lig1_func, axis=0)
 
+    #Transforms and appends rototranslated ligand 2
     xyz_lig2_func_conv=np.insert(xyz_lig2_func, 3, 1, axis=1).T
     for i in range(len(xyz_stones2_func[:,0,0])):
         xyz_stones_now = xyz_stones2_func[i,:,:]
@@ -242,12 +247,14 @@ def print_NP_pdb(xyz_coated_func, names_coated_func, xyz_anchors1_func, xyz_anch
     res=0
     at=0
     output=open(out_fname, "w")
+    #Writes the core
     for i in range(N_core):
         at+=1
         res+=1
         at_name_act=names_coated_func[i]
         write_pdb_block(at_name_act, at_name_act, xyz_coated_func[i,:], res, at, out_fname)
 
+    #Writes ligand 1
     lig_atoms=0
     for i in range(N_tot_lig1):
         at+=1
@@ -257,6 +264,7 @@ def print_NP_pdb(xyz_coated_func, names_coated_func, xyz_anchors1_func, xyz_anch
         lig_atoms+=1
         write_pdb_block(at_name_act, res_name1_opt, xyz_coated_func[i+N_core,:], res, at, out_fname)
 
+    #Writes ligand 2
     lig_atoms=0
     for i in range(N_tot_lig2):
         at+=1
