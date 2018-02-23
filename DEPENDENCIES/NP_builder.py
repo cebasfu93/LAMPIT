@@ -282,14 +282,6 @@ def write_pdb_block(atname_func, res_name_func, xyz_func, resnum, atnum, out_fil
     coords.write(str(round(xyz_func[2],3)).rjust(8)+"\n")
     coords.close()
 
-def print_xyz(coordenadas, nombres, fnombre):
-    #Prints a random .xyz file with coordinates and names given
-    output=open(fnombre, "w")
-    output.write(str(len(nombres)) + "\n \n")
-    for i in range(len(nombres)):
-        output.write(str(nombres[i]) + " " + str(coordenadas[i,0]) + " " + str(coordenadas[i,1]) + " " + str(coordenadas[i,2]) + "\n")
-    output.close()
-
 xyz_anchors1, xyz_anchors2 = assign_morph(xyz_core, names_core)
 
 xyz_stones1 = get_stones(xyz_anchors1, xyz_pillars1)
@@ -298,4 +290,3 @@ xyz_stones2 = get_stones(xyz_anchors2, xyz_pillars2)
 xyz_coated_NP, names_coated_NP = coat_NP(xyz_core, names_core, xyz_lig1, names_lig1, xyz_pillars1, xyz_stones1, xyz_lig2, names_lig2, xyz_pillars2, xyz_stones2)
 
 print_NP_pdb(xyz_coated_NP, names_coated_NP, xyz_anchors1, xyz_anchors2, outname_opt)
-#print_xyz(xyz_coated_NP, names_coated_NP, outname_opt)
