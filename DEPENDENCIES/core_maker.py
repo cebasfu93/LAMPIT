@@ -4,7 +4,7 @@ import math, random
 #from mpl_toolkits.mplot3d import Axes3D
 #import matplotlib.pyplot as plt
 
-lattice_constants = {'Pt' : 0.39242}
+lattice_constants = {'Pt' : 0.39242} #in nm
 lattice_constants['Au'] = 0.40782
 lattice_constants['Fe'] = 0.28665
 lattice_constants['Al'] = 0.40495
@@ -14,7 +14,7 @@ lattice_constants['Pd'] = 0.38907
 lattice_constants['Ag'] = 0.40853
 lattice_constants['Cu'] = 0.36149
 
-metal_radius = {'Pt' : 0.1385}
+metal_radius = {'Pt' : 0.1385} #in nm
 metal_radius['Au'] = 0.144
 metal_radius['Fe'] = 0.126
 metal_radius['Al'] = 0.143
@@ -27,13 +27,12 @@ parser=OptionParser()
 parser.add_option("-o", "--output", action="store", type='string', dest="OutputFile", default='NP1.pdb', help="Name of the output file")
 parser.add_option("-m", "--metal", action="store", type='string', dest="Metal", default='Au', help="Chemical symbol of the core")
 parser.add_option("-r", "--radius", action="store", type='float', dest="Radius", default='3.0', help="Radius of the spherical core (nm)")
+parser.add_option("-t", "--type", action="store", type='string', dest="SphereType", default='hollow', help="Methods used to build the sphere. Valid options: fcc, hollow, solid")
 (options, args) = parser.parse_args()
 outname_opt = options.OutputFile
 metal_opt = options.Metal
 radius_opt = options.Radius
-fcc = False
-hollow = True
-solid = False
+sphere = options.SphereType
 
 def center(objeto):
     COM = np.average(objeto, axis=0)
@@ -64,11 +63,14 @@ def fcc_solid_sphere():
 
     return fcc_sphere
 
-def hollow_sphere():
-    A = 4 * radius_opt**2
+def hollow_sphere(radius, samples):
+    return radius*fibonacci_sphere(samples)
+
+def get_N(radius):
+    A = 4 * radius**2
     a = metal_radius[metal_opt]**2
     N = int(A//a)
-    return fibonacci_sphere(N)
+    return N
 
 def fibonacci_sphere(samples):
     rnd = 1.
@@ -88,20 +90,43 @@ def fibonacci_sphere(samples):
 
         points.append([x,y,z])
 
-    return radius_opt*np.array(points)
+    return np.array(points)
 
 def solid_sphere():
+    D = 4 / (lattice_constants[metal_opt]**3) #atoms/nm3
+
+    N_shells = int(radius_opt // (2*metal_radius[metal_opt]))
+    real_radius = N_shells*2*metal_radius[metal_opt]
+    V = 4.0 * math.pi * real_radius**3 /3.0 #nm3
+
+    N_atoms = D * V
+    atoms_shells = []
+    for i in range(N_shells):
+        atoms_shells.append(get_N(2*i*metal_radius[metal_opt]))
+
+    atoms_shells[0] = 1
+    delta = N_atoms - np.sum(np.array(atoms_shells))
+    points = np.array([0.0, 0.0, 0.0])
+
+    for i in range(N_shells):
+        atoms_shells[i] += int(3*delta*(i**2)/N_shells**3)
+        shell = hollow_sphere(2*i*metal_radius[metal_opt], atoms_shells[i])
+        points = np.vstack((points, shell))
+
+    points = np.delete(points, 0, 0)
+    return points
 
 def print_xyz(coords):
     coords = coords * 10
-    print(str(len(coords)))
-    print(" ")
+    output = open(outname_opt, "a")
+    output.write(str(len(coords)) + "\n\n")
     for i in range(len(coords)):
-        print(metal_opt + ' {:.3f}  {:.3f}  {:.3f}'. format(coords[i,0], coords[i,1], coords[i,2]))
+        output.write(metal_opt + '{:.3f}'.format(coords[i,0]).rjust(10) + "{:.3f}".format(coords[i,1]).rjust(10) + "{:.3f}".format(coords[i,2]).rjust(10) + "\n")
+    output.close()
 
-if fcc == True:
+if sphere == "fcc":
     print_xyz(fcc_solid_sphere())
-elif hollow == True:
-    print_xyz(hollow_sphere())
-elif solid == True:
-    print_xyz(solid_sphere)
+elif sphere == "hollow":
+    print_xyz(hollow_sphere(radius_opt, get_N(radius_opt)))
+elif sphere == "solid":
+    print_xyz(solid_sphere())
