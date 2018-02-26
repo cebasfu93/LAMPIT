@@ -1,6 +1,7 @@
 import numpy as np
 from optparse import OptionParser
 import math, random
+from  scipy.spatial.distance import cdist
 #from mpl_toolkits.mplot3d import Axes3D
 #import matplotlib.pyplot as plt
 
@@ -23,16 +24,20 @@ metal_radius['Pd'] = 0.137
 metal_radius['Ag'] = 0.144
 metal_radius['Cu'] = 0.128
 
+metal_radius['S'] = 0.102
+
 parser=OptionParser()
 parser.add_option("-o", "--output", action="store", type='string', dest="OutputFile", default='NP1.pdb', help="Name of the output file")
 parser.add_option("-m", "--metal", action="store", type='string', dest="Metal", default='Au', help="Chemical symbol of the core")
+parser.add_option("-n", "--ligands", action="store", type='int', dest="NumberLigands", default='60', help="Number of ligands to place around the sphere")
 parser.add_option("-r", "--radius", action="store", type='float', dest="Radius", default='3.0', help="Radius of the spherical core (nm)")
 parser.add_option("-t", "--type", action="store", type='string', dest="SphereType", default='hollow', help="Methods used to build the sphere. Valid options: fcc, hollow, solid")
 (options, args) = parser.parse_args()
 outname_opt = options.OutputFile
 metal_opt = options.Metal
+lignum_opt = options.NumberLigands
 radius_opt = options.Radius
-sphere = options.SphereType
+sphere_opt = options.SphereType
 
 def center(objeto):
     COM = np.average(objeto, axis=0)
@@ -60,6 +65,8 @@ def fcc_solid_sphere():
     fcc_block = center(fcc_block)
 
     fcc_sphere=fcc_block[np.linalg.norm(fcc_block, axis=1)<= radius_opt]
+
+    fcc_sphere = np.vstack((fcc_sphere, put_staples(fcc_sphere, radius_opt)))
 
     return fcc_sphere
 
@@ -96,6 +103,8 @@ def solid_sphere():
     D = 4 / (lattice_constants[metal_opt]**3) #atoms/nm3
 
     N_shells = int(radius_opt // (2*metal_radius[metal_opt]))
+    if abs(N_shells*2*metal_radius[metal_opt]-radius_opt) >abs((N_shells+1)*2*metal_radius[metal_opt]-radius_opt):
+        N_shells +=1
     real_radius = N_shells*2*metal_radius[metal_opt]
     V = 4.0 * math.pi * real_radius**3 /3.0 #nm3
 
@@ -111,22 +120,44 @@ def solid_sphere():
     for i in range(N_shells):
         atoms_shells[i] += int(3*delta*(i**2)/N_shells**3)
         shell = hollow_sphere(2*i*metal_radius[metal_opt], atoms_shells[i])
+        if i == (N_shells-1):
+            S_atoms = put_staples(shell, real_radius)
         points = np.vstack((points, shell))
-
+    points = np.vstack((points, S_atoms))
     points = np.delete(points, 0, 0)
+
+    print("The output radius is {:.3f} nm".format(real_radius))
+    print("The theoretical density is {:.3f} atoms/nm^3".format(D))
+    print("The achieved density is {:.3f} atoms/nm^3".format(len(points)/V))
+
     return points
+
+def put_staples(shell, radius):
+    S_atoms = hollow_sphere(radius, lignum_opt)
+    distances = cdist(S_atoms, shell)
+    mins = np.argmin(distances, axis=1)
+    for i in range(len(S_atoms)):
+        norma=np.linalg.norm(shell[mins[i]])
+        scaling = (norma + (metal_radius[metal_opt]+metal_radius['S'])/2)/norma
+        S_atoms[i,:] = scaling*shell[mins[i]]
+    return S_atoms
 
 def print_xyz(coords):
     coords = coords * 10
     output = open(outname_opt, "a")
     output.write(str(len(coords)) + "\n\n")
-    for i in range(len(coords)):
+    N_metal = len(coords)-lignum_opt
+    for i in range(N_metal):
         output.write(metal_opt + '{:.3f}'.format(coords[i,0]).rjust(10) + "{:.3f}".format(coords[i,1]).rjust(10) + "{:.3f}".format(coords[i,2]).rjust(10) + "\n")
+    for i in range(N_metal, len(coords)):
+        output.write('S' + '{:.3f}'.format(coords[i,0]).rjust(10) + "{:.3f}".format(coords[i,1]).rjust(10) + "{:.3f}".format(coords[i,2]).rjust(10) + "\n")
     output.close()
 
-if sphere == "fcc":
+if sphere_opt == "fcc":
     print_xyz(fcc_solid_sphere())
-elif sphere == "hollow":
-    print_xyz(hollow_sphere(radius_opt, get_N(radius_opt)))
-elif sphere == "solid":
+elif sphere_opt == "hollow":
+    points = hollow_sphere(radius_opt, get_N(radius_opt))
+    NP = np.vstack((points, put_staples(points, radius_opt)))
+    print_xyz(NP)
+elif sphere_opt == "solid":
     print_xyz(solid_sphere())
