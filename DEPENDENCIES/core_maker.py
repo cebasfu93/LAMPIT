@@ -66,7 +66,7 @@ def fcc_solid_sphere():
     fcc_block = np.unique(fcc_block, axis=0)
     fcc_block = center(fcc_block)
 
-    fcc_sphere=fcc_block[np.linalg.norm(fcc_block, axis=1)<= radius_opt]
+    fcc_sphere=fcc_block[np.linalg.norm(fcc_block, axis=1)<= (radius_opt-metal_radius[metal_opt])]
 
     fcc_sphere = np.vstack((fcc_sphere, put_staples(fcc_sphere, radius_opt)))
 
