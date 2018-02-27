@@ -31,13 +31,15 @@ parser.add_option("-o", "--output", action="store", type='string', dest="OutputF
 parser.add_option("-m", "--metal", action="store", type='string', dest="Metal", default='Au', help="Chemical symbol of the core")
 parser.add_option("-n", "--ligands", action="store", type='int', dest="NumberLigands", default='60', help="Number of ligands to place around the sphere")
 parser.add_option("-r", "--radius", action="store", type='float', dest="Radius", default='3.0', help="Radius of the spherical core (nm)")
-parser.add_option("-t", "--type", action="store", type='string', dest="SphereType", default='hollow', help="Methods used to build the sphere. Valid options: fcc, hollow, solid")
+parser.add_option("-t", "--type", action="store", type='string', dest="SphereType", default='hollow', help="Methods used to build the sphere. Valid options: fcc, hollow, solid, semisolid. When solid is selected, the output radius is not the same as the requested")
+parser.add_option("-d", "--thickness", action="store", type='float', dest="Thickness", default='1.4', help="Thickness of the shell (nm) when using option semisolid")
 (options, args) = parser.parse_args()
 outname_opt = options.OutputFile
 metal_opt = options.Metal
 lignum_opt = options.NumberLigands
 radius_opt = options.Radius
 sphere_opt = options.SphereType
+thickness_opt = options.Thickness
 
 def center(objeto):
     COM = np.average(objeto, axis=0)
@@ -71,7 +73,7 @@ def fcc_solid_sphere():
     return fcc_sphere
 
 def hollow_sphere(radius, samples):
-    return radius*fibonacci_sphere(samples)
+    return (radius-metal_radius[metal_opt])*fibonacci_sphere(samples)
 
 def get_N(radius):
     A = 4 * radius**2
@@ -102,10 +104,9 @@ def fibonacci_sphere(samples):
 def solid_sphere():
     D = 4 / (lattice_constants[metal_opt]**3) #atoms/nm3
 
-    N_shells = int(radius_opt // (2*metal_radius[metal_opt]))
-    if abs(N_shells*2*metal_radius[metal_opt]-radius_opt) >abs((N_shells+1)*2*metal_radius[metal_opt]-radius_opt):
-        N_shells +=1
-    real_radius = N_shells*2*metal_radius[metal_opt]
+    N_shells = int(round(radius_opt / (2*metal_radius[metal_opt])))+1
+
+    real_radius = (2*N_shells-1)*metal_radius[metal_opt]
     V = 4.0 * math.pi * real_radius**3 /3.0 #nm3
 
     N_atoms = D * V
@@ -121,7 +122,7 @@ def solid_sphere():
         atoms_shells[i] += int(3*delta*(i**2)/N_shells**3)
         shell = hollow_sphere(2*i*metal_radius[metal_opt], atoms_shells[i])
         if i == (N_shells-1):
-            S_atoms = put_staples(shell, real_radius)
+            S_atoms = put_staples(shell, real_radius-metal_radius[metal_opt])
         points = np.vstack((points, shell))
     points = np.vstack((points, S_atoms))
     points = np.delete(points, 0, 0)
@@ -130,6 +131,38 @@ def solid_sphere():
     print("The theoretical density is {:.3f} atoms/nm^3".format(D))
     print("The achieved density is {:.3f} atoms/nm^3".format(len(points)/V))
 
+    return points
+
+def semi_solid_sphere(thick):
+    if thick >= radius_opt:
+        print("Thickness bigger than NP radius")
+
+    D = 4 / (lattice_constants[metal_opt]**3) #atoms/nm3
+
+    N_shells = int(round(thick / (2*metal_radius[metal_opt])))+1
+
+    real_shell = (2*N_shells)*metal_radius[metal_opt]
+    V = 4.0 * math.pi / 3.0 *(radius_opt**3 - real_shell**3)
+
+    N_atoms = D * V
+    atoms_shells = []
+    for i in range(N_shells):
+        atoms_shells.append(get_N(radius_opt - real_shell + (2*i+1)*metal_radius[metal_opt]))
+
+    delta = N_atoms - np.sum(np.array(atoms_shells))
+    points = np.array([0.0, 0.0, 0.0])
+
+    for i in range(N_shells):
+        atoms_shells[i] += int(3*delta*((i+0.5)**2)/(N_shells**3))
+        shell = hollow_sphere(radius_opt - real_shell + (2*i+1)*metal_radius[metal_opt], atoms_shells[i])
+        if i == (N_shells-1):
+            S_atoms = put_staples(shell, radius_opt-metal_radius[metal_opt])
+        points = np.vstack((points, shell))
+    points = np.vstack((points, S_atoms))
+    points = np.delete(points, 0, 0)
+
+    print("The theoretical density is {:.3f} atoms/nm^3".format(D))
+    print("The achieved density is {:.3f} atoms/nm^3".format(len(points)/V))
     return points
 
 def put_staples(shell, radius):
@@ -157,7 +190,9 @@ if sphere_opt == "fcc":
     print_xyz(fcc_solid_sphere())
 elif sphere_opt == "hollow":
     points = hollow_sphere(radius_opt, get_N(radius_opt))
-    NP = np.vstack((points, put_staples(points, radius_opt)))
+    NP = np.vstack((points, put_staples(points, radius_opt-metal_radius[metal_opt])))
     print_xyz(NP)
 elif sphere_opt == "solid":
     print_xyz(solid_sphere())
+elif sphere_opt == "semisolid":
+    print_xyz(semi_solid_sphere(thickness_opt))
