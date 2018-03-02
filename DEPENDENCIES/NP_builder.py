@@ -5,7 +5,7 @@ import os
 import sys
 from  transformations import *
 import random
-from mpl_toolkits.mplot3d import Axes3D
+#from mpl_toolkits.mplot3d import Axes3D
 
 #Imports input file with options
 inp=np.genfromtxt(sys.argv[1], dtype="str")
@@ -16,10 +16,8 @@ corename_opt = "Core.pdb"
 core_at_name_opt = "Au"
 staple_at_name_opt = "S"
 name_anchor_opt = "C"
-res_name1_opt = "UNK"
-res_name2_opt = "UNK"
-ligname1_opt = "Ligand1.mol2"
-ligname2_opt = "Ligand2.mol2"
+ligand1_opt = "Ligand1.mol2"
+ligand2_opt = "Ligand2.mol2"
 frac_lig1_opt = 0.5
 morph_opt = "random"
 rseed_opt = 666
@@ -42,18 +40,12 @@ def load_options(input_file):
         elif "coreanchor" in input_file[i]:
             global name_anchor_opt
             name_anchor_opt = input_file[i][1]
-        elif "ligname1" in input_file[i]:
-            global res_name1_opt
-            res_name1_opt = input_file[i][1]
-        elif "ligname2" in input_file[i]:
-            global res_name2_opt
-            res_name2_opt = input_file[i][1]
         elif "ligand1" in input_file[i]:
-            global ligname1_opt
-            ligname1_opt = input_file[i][1]
+            global ligand1_opt
+            ligand1_opt = input_file[i][1]
         elif "ligand2" in input_file[i]:
-            global ligname2_opt
-            ligname2_opt = input_file[i][1]
+            global ligand2_opt
+            ligand2_opt = input_file[i][1]
         elif "morphology" in input_file[i]:
             global morph_opt
             morph_opt = input_file[i][1]
@@ -103,15 +95,16 @@ def init_lig_mol2(ligand_fname):
             ini = i+1
             found_ATOM = 1
         elif "@<TRIPOS>RESIDUECONNECT" in lig_file[i]:
-            anchor_ndx_func=int(lig_file[i+1].split()[0])-1
+            anchor_ndx_func = int(lig_file[i+1].split()[0])-1
 
-    xyz_lig_func, names_lig_func=np.array(xyz_lig_func, dtype='float'), np.array(names_lig_func)
-    anchor_pos=np.copy(xyz_lig_func)[anchor_ndx_func,:]
-
+    xyz_lig_func, names_lig_func = np.array(xyz_lig_func, dtype='float'), np.array(names_lig_func)
+    anchor_pos = np.copy(xyz_lig_func)[anchor_ndx_func,:]
+    resid = at_file[7]
+    print(resid, ligand_fname)
     #Moves the ligand so that the anchor is in (0,0,0)
     for i in range(len(xyz_lig_func[:,0])):
         xyz_lig_func[i,:] = xyz_lig_func[i,:] - anchor_pos
-    return xyz_lig_func, names_lig_func, anchor_ndx_func
+    return xyz_lig_func, names_lig_func, anchor_ndx_func, resid
 
 def init_core_pdb(core_fname):
     #Imports core pdb file. Centers the core in (0,0,0) and returns xyz coordinates and names
@@ -159,10 +152,10 @@ def get_ligand_pill(xyz_lig_func, anchor_ndx_func):
         pillars_func = np.vstack((pillars_func, np.dot(xyz_lig_func[i], pca1) * pca1))
     return pillars_func
 
-check_options(corename_opt, ligname1_opt, ligname2_opt)
+check_options(corename_opt, ligand1_opt, ligand2_opt)
 
-xyz_lig1, names_lig1, anchor_ndx1 = init_lig_mol2(ligname1_opt)
-xyz_lig2, names_lig2, anchor_ndx2 = init_lig_mol2(ligname2_opt)
+xyz_lig1, names_lig1, anchor_ndx1, res_name1 = init_lig_mol2(ligand1_opt)
+xyz_lig2, names_lig2, anchor_ndx2, res_name2 = init_lig_mol2(ligand2_opt)
 
 xyz_core, names_core = init_core_pdb(corename_opt)
 
@@ -262,7 +255,7 @@ def print_NP_pdb(xyz_coated_func, names_coated_func, xyz_anchors1_func, xyz_anch
         if(lig_atoms%N_at_lig1==0):
             res+=1
         lig_atoms+=1
-        write_pdb_block(at_name_act, res_name1_opt, xyz_coated_func[i+N_core,:], res, at, out_fname)
+        write_pdb_block(at_name_act, res_name1, xyz_coated_func[i+N_core,:], res, at, out_fname)
 
     #Writes ligand 2
     lig_atoms=0
@@ -272,7 +265,7 @@ def print_NP_pdb(xyz_coated_func, names_coated_func, xyz_anchors1_func, xyz_anch
         if(lig_atoms%N_at_lig2==0):
             res+=1
         lig_atoms+=1
-        write_pdb_block(at_name_act, res_name2_opt, xyz_coated_func[i+N_core+N_tot_lig1,:], res, at, out_fname)
+        write_pdb_block(at_name_act, res_name2, xyz_coated_func[i+N_core+N_tot_lig1,:], res, at, out_fname)
 
     output.close()
 

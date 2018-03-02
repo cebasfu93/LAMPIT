@@ -22,6 +22,7 @@ RSEED="666"
 F_LEAP1="LeapLig"  #Name of the first tleap input
 F_LEAP2="LeapSys"  #Name of the second tleap input
 F_NPBUILDER="NP_builder"
+F_STAPLES="staples_topology"
 DEPENDS="/DATA/SoftwareSFU/IN-HOUSE/LAMPIT/DEPENDENCIES/"  #Path of the folder with LAMPIT's dependencies
 ANCHOR_NAME="C1"
 ANCHOR_H="H1,H2"
@@ -42,8 +43,6 @@ echo "core \t ${SYS_NAME}/${CORE_PDB}.pdb" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "corename \t ${CORENAME}" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "staplename \t ${STAPLENAME}" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "coreanchor \t ${COREANCHOR}" >> ${SYS_NAME}/${F_NPBUILDER}.in
-echo "ligname1 \t ${NEW_NAME1}" >> ${SYS_NAME}/${F_NPBUILDER}.in
-echo "ligname2 \t ${NEW_NAME2}" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "ligand1 \t ${SYS_NAME}/${NEW_NAME1}.mol2" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "ligand2 \t ${SYS_NAME}/${NEW_NAME2}.mol2" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "morphology \t ${MORPHOLOGY}" >> ${SYS_NAME}/${F_NPBUILDER}.in
@@ -53,7 +52,7 @@ echo "rseed \t ${RSEED}" >> ${SYS_NAME}/${F_NPBUILDER}.in
 #STONES THE SPECIFIED ATOMS OF THE LIGAND TO THE SULPHURS OF THE NP
 python3.6 ${DEPENDS}/NP_builder.py ${SYS_NAME}/${F_NPBUILDER}.in
 
-:'
+
 #WRITED FILE WITH THE FF PARAMETERS FOR THE LIGAND
 parmchk2 -i ${SYS_NAME}/${NEW_NAME1}.mol2 -f mol2 -o ${SYS_NAME}/${NEW_NAME1}.frcmod -a y
 parmchk2 -i ${SYS_NAME}/${NEW_NAME2}.mol2 -f mol2 -o ${SYS_NAME}/${NEW_NAME2}.frcmod -a y
@@ -101,6 +100,15 @@ mv ${SYS_NAME}_GMX.top ${SYS_NAME}/${SYS_NAME}.top
 #Remove files that ABSOLUTELY unnecessary
 rm -rf em.mdp md.mdp leap.log ANTECHAMBER.FRCMOD
 
+
+echo "topfile \t ${SYS_NAME}/${SYS_NAME}.top" > ${SYS_NAME}/${F_STAPLES}.in
+echo "grofile \t ${SYS_NAME}/${SYS_NAME}.gro" >> ${SYS_NAME}/${F_STAPLES}.in
+echo "ligname1 \t ${NEW_NAME1}" >> ${SYS_NAME}/${F_STAPLES}.in
+echo "ligname2 \t ${NEW_NAME2}" >> ${SYS_NAME}/${F_STAPLES}.in
+echo "ligand1 \t ${SYS_NAME}/${NEW_NAME1}.mol2" >> ${SYS_NAME}/${F_STAPLES}.in
+echo "ligand2 \t ${SYS_NAME}/${NEW_NAME2}.mol2" >> ${SYS_NAME}/${F_STAPLES}.in
+echo "workdir \t ${SYS_NAME}" >> ${SYS_NAME}/${F_STAPLES}.in
+
+
 #Modifies topology file to include bonds and angles involving staple atoms
-python3.6 ${DEPENDS}/staples_topology.py -p ${SYS_NAME}/${SYS_NAME}.top -x ${SYS_NAME}/${SYS_NAME}.gro -a ${ANCHOR_NAME} -y ${ANCHOR_H} -f ${SYS_NAME}
-'
+#python3.6 ${DEPENDS}/staples_topology.py ${SYS_NAME}/${F_STAPLES}.in
