@@ -4,9 +4,7 @@ Script in bash/python for the preparation of a NP coated by a given ligand.
 From xyz of NP core and mol2 of the ligand, the results are the parameter and coordinates of the coated NP.
 
 
-Core (.xyz)	  		     Coordinates (.gro)
-	       ----> Coated NP ---->
-Ligand (.mol2)			     Topology (.top)
+Core (.pdb)  Ligand (.mol2)  ----> Coated NP ----> Coordinates (.gro)  Topology (.top)
 
 Remarks:
 1. Usage: Download LAMPIT.sh and DEPENDENCIES/, then modify the variables in LAMPIT.sh and run.
