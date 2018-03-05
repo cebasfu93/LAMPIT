@@ -5,6 +5,7 @@ import os
 import sys
 from  transformations import *
 import random
+from scipy.spatial import distance
 
 #Imports input file with options
 inp=np.genfromtxt(sys.argv[1], dtype="str")
@@ -192,10 +193,15 @@ def assign_morph(xyz_core_func, names_core_func):
         random.shuffle(indexes)
         lig1_ndx = indexes[:for_lig1]
         lig2_ndx = indexes[for_lig1:]
-        xyz_anchors1_func=xyz_anchors_func[lig1_ndx,:]
-        xyz_anchors2_func=xyz_anchors_func[lig2_ndx,:]
+    elif morph_opt == "janus":
+        seed = xyz_anchors_func[0]
+        D_seed_anch = distance.cdist([seed], xyz_anchors_func)
+        lig1_ndx = D_seed_anch[0].argsort()[:for_lig1]
+        lig2_ndx = list(set(indexes) - set(lig1_ndx))
     else:
         print("Morphology not supported")
+    xyz_anchors1_func=xyz_anchors_func[lig1_ndx]
+    xyz_anchors2_func=xyz_anchors_func[lig2_ndx]
     return xyz_anchors1_func, xyz_anchors2_func
 
 def get_stones(xyz_anchorsi_func, xyz_pillarsi_func):

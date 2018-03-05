@@ -12,9 +12,9 @@ MOL2_LIG1="LF2" #mol2 file of a linear ligand 1 with the right charges (without 
 OLD_NAME1="F00"  #Name of the ligand 1 in MOL2_LIG1
 NEW_NAME1="LF2"  #New 3-letter residue name for ligand 1
 
-FRAC_LIG1="1.0" #Fraction (0-1) of Ligand1 in the coating. If it is set to 1, it will only look for the files of ligand1
+FRAC_LIG1="0.5" #Fraction (0-1) of Ligand1 in the coating. If it is set to 1, it will only look for the files of ligand1
 
-MORPHOLOGY="random" #Morphology to distribute ligand 1 and 2
+MORPHOLOGY="janus" #Morphology to distribute ligand 1 and 2
 RSEED="666" #Random seed used when MORPHOLOGY is set to "random"
 MOL2_LIG2="LF3" #mol2 file of a linear ligand 2 with the right charges
 OLD_NAME2="F00"  #Name of the ligand 2 in MOL2_LIG1
