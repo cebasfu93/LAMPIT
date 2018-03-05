@@ -2,28 +2,28 @@
 
 #OPTIONS FOR THE USER
 SYS_NAME="test"  #Prefix used for the generation of files
-CORE_PDB="au144SR60"  #path to the pdb of the NP's core including the first carbon
 
-MOL2_LIG1="LF2" #mol2 file of a linear ligand 1 with the right charges
+CORE_PDB="au144SR60"  #path to the pdb of the NP's core including the first carbon
+CORENAME="Au"  #Name of the core atom in CORE_PDB
+STAPLENAME="S" #Name of the stapling atom in CORE_PDB
+COREANCHOR="C" #Name of the carbon included in CORE_PDB
+
+MOL2_LIG1="LF2" #mol2 file of a linear ligand 1 with the right charges (without extension)
 OLD_NAME1="F00"  #Name of the ligand 1 in MOL2_LIG1
 NEW_NAME1="LF2"  #New 3-letter residue name for ligand 1
 
+FRAC_LIG1="1.0" #Fraction (0-1) of Ligand1 in the coating. If it is set to 1, it will only look for the files of ligand1
+
+MORPHOLOGY="random" #Morphology to distribute ligand 1 and 2
+RSEED="666" #Random seed used when MORPHOLOGY is set to "random"
 MOL2_LIG2="LF3" #mol2 file of a linear ligand 2 with the right charges
 OLD_NAME2="F00"  #Name of the ligand 2 in MOL2_LIG1
 NEW_NAME2="LF3"  #New 3-letter residue name for ligand 2
 
-FRAC_LIG1="1.0"
-
-CORENAME="Au"  #Name core atom in CORE_PDB
-STAPLENAME="S" #N
-COREANCHOR="C"
-MORPHOLOGY="random"
-RSEED="666"
-
 F_LEAP1="LeapLig"  #Name of the first tleap input
 F_LEAP2="LeapSys"  #Name of the second tleap input
-F_NPBUILDER="NP_builder"
-F_STAPLES="staples"
+F_NPBUILDER="NP_builder" #Name of the input file for NP_builder.py
+F_STAPLES="staples" #Name of the input file for staples.py
 DEPENDS="/DATA/SoftwareSFU/IN-HOUSE/LAMPIT/DEPENDENCIES/"  #Path of the folder with LAMPIT's dependencies
 
 ########################################################################################################################################################################################
@@ -49,15 +49,15 @@ echo "morphology \t ${MORPHOLOGY}" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "frac_lig1 \t ${FRAC_LIG1}" >> ${SYS_NAME}/${F_NPBUILDER}.in
 echo "rseed \t ${RSEED}" >> ${SYS_NAME}/${F_NPBUILDER}.in
 
-#STONES THE SPECIFIED ATOMS OF THE LIGAND TO THE SULPHURS OF THE NP
+#Coates the NP
 python3.6 ${DEPENDS}/NP_builder.py ${SYS_NAME}/${F_NPBUILDER}.in
 
 
-#WRITED FILE WITH THE FF PARAMETERS FOR THE LIGAND
+#WRITEs FILE WITH THE FF PARAMETERS FOR THE LIGAND
 parmchk2 -i ${SYS_NAME}/${NEW_NAME1}.mol2 -f mol2 -o ${SYS_NAME}/${NEW_NAME1}.frcmod -a y
 parmchk2 -i ${SYS_NAME}/${NEW_NAME2}.mol2 -f mol2 -o ${SYS_NAME}/${NEW_NAME2}.frcmod -a y
 
-#Writes first input file for tleap and writes the .lib file for the ligand
+#Writes first input file for tleap and writes the .lib file for the ligand(s)
 echo "source leaprc.gaff" > ${SYS_NAME}/${F_LEAP1}.in
 echo "loadamberparams ${SYS_NAME}/${NEW_NAME1}.frcmod \n" >> ${SYS_NAME}/${F_LEAP1}.in
 echo "loadamberparams ${SYS_NAME}/${NEW_NAME2}.frcmod \n" >> ${SYS_NAME}/${F_LEAP1}.in
@@ -97,10 +97,10 @@ mv acpype.log ${SYS_NAME}
 mv ${SYS_NAME}_GMX.gro ${SYS_NAME}/${SYS_NAME}.gro
 mv ${SYS_NAME}_GMX.top ${SYS_NAME}/${SYS_NAME}.top
 
-#Remove files that ABSOLUTELY unnecessary
+#Remove files that are ABSOLUTELY unnecessary
 rm -rf em.mdp md.mdp leap.log ANTECHAMBER.FRCMOD
 
-
+#Writes input file for staples.py
 echo "topfile \t ${SYS_NAME}/${SYS_NAME}.top" > ${SYS_NAME}/${F_STAPLES}.in
 echo "grofile \t ${SYS_NAME}/${SYS_NAME}.gro" >> ${SYS_NAME}/${F_STAPLES}.in
 echo "resname1 ${NEW_NAME1}\t " >> ${SYS_NAME}/${F_STAPLES}.in
@@ -108,7 +108,6 @@ echo "resname2 ${NEW_NAME2}\t " >> ${SYS_NAME}/${F_STAPLES}.in
 echo "ligand1 \t ${SYS_NAME}/${NEW_NAME1}.mol2" >> ${SYS_NAME}/${F_STAPLES}.in
 echo "ligand2 \t ${SYS_NAME}/${NEW_NAME2}.mol2" >> ${SYS_NAME}/${F_STAPLES}.in
 echo "workdir \t ${SYS_NAME}" >> ${SYS_NAME}/${F_STAPLES}.in
-
 
 #Modifies topology file to include bonds and angles involving staple atoms
 python3.6 ${DEPENDS}/staples.py ${SYS_NAME}/${F_STAPLES}.in

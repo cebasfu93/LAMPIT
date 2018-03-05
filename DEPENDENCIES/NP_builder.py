@@ -5,7 +5,6 @@ import os
 import sys
 from  transformations import *
 import random
-#from mpl_toolkits.mplot3d import Axes3D
 
 #Imports input file with options
 inp=np.genfromtxt(sys.argv[1], dtype="str")
@@ -155,27 +154,31 @@ def get_ligand_pill(xyz_lig_func, anchor_ndx_func):
 
 check_options(corename_opt, ligand1_opt, ligand2_opt)
 
+#Initialized the coordinates, names and types of the ligands' atoms
 xyz_lig1, names_lig1, anchor_ndx1, res_name1 = init_lig_mol2(ligand1_opt)
 if frac_lig1_opt < 1.0:
     xyz_lig2, names_lig2, anchor_ndx2, res_name2 = init_lig_mol2(ligand2_opt)
 else:
     xyz_lig2, names_lig2, anchor_ndx2, res_name2 = [], [], [], []
 
+#Initializes coordinates and names of the core atoms
 xyz_core, names_core = init_core_pdb(corename_opt)
 
+#Initilizes the pillars of the ligands with 3 points over PCA1
 xyz_pillars1 = get_ligand_pill(xyz_lig1, anchor_ndx1)
 if frac_lig1_opt < 1.0:
     xyz_pillars2 = get_ligand_pill(xyz_lig2, anchor_ndx2)
 else:
     xyz_pillars2 = []
 
-#Define number of atoms in a ligand, number of staples, and number of stones specified
+#Define number of atoms in a ligand
 N_at_lig1 = len(xyz_lig1[:,0])
 if frac_lig1_opt < 1.0:
     N_at_lig2 = len(xyz_lig2[:,0])
 else:
     N_at_lig2 = 0
 
+#Defines number of blocks in the system
 N_S = len(names_core[names_core=='ST'])
 
 def assign_morph(xyz_core_func, names_core_func):

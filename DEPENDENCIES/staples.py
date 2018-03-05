@@ -9,6 +9,7 @@ import collections
 #Imports input file with options
 inp=np.genfromtxt(sys.argv[1], dtype="str")
 
+#Initializes the options in default values
 NP_gro_opt = "test/test.gro"
 NP_top_opt = "test/test.top"
 res_name1_opt = "LF1"
@@ -45,6 +46,7 @@ def load_options(input_file):
 load_options(inp)
 
 def angle(a, b, c):
+    #Calculates the angle formed by a-b-c
     ba = a - b
     bc = c - b
     cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
@@ -52,6 +54,7 @@ def angle(a, b, c):
     return angle
 
 def get_lig_info(lig_mol2):
+    #Reads the mol2 file of a ligand and returns the names and types of the connecting C atoms and their hydrogen atoms
     mol2_file = np.genfromtxt(lig_mol2, delimiter = "\n", dtype='str')
     found_ATOM = 0
     found_CONNECT = 0
@@ -81,6 +84,7 @@ def get_lig_info(lig_mol2):
     return names[ndx_C], types[ndx_C], names[ndx_Hs], types[ndx_Hs]
 
 def load_gro():
+    #Loads the gro file written by NP_builder.py and return the coordinates and names of the atoms in the system
     gro_file = np.genfromtxt(NP_gro_opt, dtype='str', skip_header=2, skip_footer=1)
     xyz = []
     names = []
@@ -92,6 +96,7 @@ def load_gro():
     return np.array(xyz).astype('float'), np.array(names)
 
 def load_top():
+    #Loads the topology of the system writen by acpype.py and returns the types of the atoms
     top_file = np.genfromtxt(NP_top_opt, dtype='str', delimiter = "\n")
     types = []
     for i in range(len(top_file)):
@@ -104,6 +109,7 @@ def load_top():
     return types
 
 def get_gro_ndx(names_array, search_object):
+    #Returns he indexes of the atoms with a given name
     ndx = []
     for i in range(len(names_array)):
         if search_object == str(names_array[i]):
@@ -111,6 +117,7 @@ def get_gro_ndx(names_array, search_object):
     return np.array(ndx)
 
 def make_blocks(ind_AU, ind_ST, ind_C, ind_H):
+    #By calculating distances to the S and C atoms, it decides the components of each block and stores them in a list
     D_ST_AU = distance.cdist(xyz_sys[ind_ST], xyz_sys[ind_AU])
     D_ST_C = distance.cdist(xyz_sys[ind_ST], xyz_sys[ind_C])
     blocks = []
@@ -124,8 +131,10 @@ def make_blocks(ind_AU, ind_ST, ind_C, ind_H):
     return blocks
 
 def make_staples(blocks_list):
+    #Given a list of blocks, it finds which blocks share gold atoms and merge them in staples
     N_blocks = len(blocks_list)
     staples_ndx = []
+    #Looks for blocks sharing atoms
     for i in range(N_blocks):
         ndx_tmp = []
         for j in range(N_blocks):
@@ -134,6 +143,7 @@ def make_staples(blocks_list):
         staples_ndx.append((ndx_tmp))
     staples_ndx = [list(x) for x in set(tuple(x) for x in staples_ndx)] #Takes the unique lists within the list
 
+    #Merge the respective blocks into staples
     staples = []
     for i in range(len(staples_ndx)):
         blocks_S = np.array([])
@@ -156,6 +166,7 @@ def make_staples(blocks_list):
     return staples
 
 def classify_staples(staples_list):
+    #Depending in the number of sulphur and gold atoms in each staple, it clssifies it. For STC and STV it calculates the angle Aul-S-Aul and with an tolerance of +/-9 degrees, the staple is classified
     for i in range(len(staples_list)):
         staple_act = staples_list[i]
         N_S = len(staple_act.S)
@@ -169,7 +180,7 @@ def classify_staples(staples_list):
             for j in range (len(staple_act.S)):
                 near_Au = staple_act.S[D_Aul_S[j].argsort()[0:2]]
                 if np.all(np.in1d(near_Au, staple_act.Au_l)):
-                    angle = angle(xyz_sys[near_Au[0]], xyz_sys[staple_act.S[j]], xyz_sys[near_Au[1]]))
+                    angle = angle(xyz_sys[near_Au[0]], xyz_sys[staple_act.S[j]], xyz_sys[near_Au[1]])
                     if angle <= 109.0 and angle >= 91.0:
                         staple_act.change_tipo('STC')
                     elif angle <= 128.2 and angle >= 110.2:
@@ -181,6 +192,7 @@ def classify_staples(staples_list):
     return staples_list
 
 def staple_to_residues(staples_list):
+    #Converts a list of staples into a lsit of residues as defined in subunits.py
     residues = []
     for i in range(len(staples_list)):
         sta = staples_list[i]
@@ -219,6 +231,7 @@ def write_pdb_block(atname_func, res_name_func, xyz_func, resnum, atnum, out_fil
     coords.close()
 
 def write_bonds(staples_list):
+    #Goes through the S atoms of every staple, looks for the closest Au and C atoms, and assign bond parameters
     bonds = open(workdir_opt + '/bonds.top', 'w')
     func_type = str(1)
     for i in range(len(staples_list)):
@@ -226,6 +239,7 @@ def write_bonds(staples_list):
         D_S_Au = distance.cdist(xyz_sys[s.S], xyz_sys[s.Au])
         D_S_C = distance.cdist(xyz_sys[s.S], xyz_sys[s.C])
         for j in range(len(s.S)):
+            #S - Au bonds
             near_Au = s.Au[D_S_Au[j].argsort()[0:2]]
             cons = 62730
             for k in range(len(near_Au)):
@@ -235,13 +249,21 @@ def write_bonds(staples_list):
                     zero = 0.241
                 bonds.write(str(s.S[j]+1).rjust(6)+str(near_Au[k]+1).rjust(7)+str(func_type).rjust(4)+"{:.4e}".format(zero).rjust(14)+"{:.4e}".format(cons).rjust(14)+" ; "+names_sys[s.S[j]]+" - "+names_sys[near_Au[k]]+" m\n")
 
+            #S - C bonds
             near_C = s.C[D_S_C[j].argsort()[0]]
             if types_sys[near_C] == 'CT':
                 cons = 99113.0
                 zero = 0.184
                 bonds.write(str(s.S[j]+1).rjust(6)+str(near_C+1).rjust(7)+str(func_type).rjust(4)+"{:.4e}".format(zero).rjust(14)+"{:.4e}".format(cons).rjust(14)+" ; "+names_sys[s.S[j]]+" - "+names_sys[near_C]+" m\n")
+            elif types_sys[near_C] == 'CA':
+                cons = 198321.6
+                zero = 0.175
+                bonds.write(str(s.S[j]+1).rjust(6)+str(near_C+1).rjust(7)+str(func_type).rjust(4)+"{:.4e}".format(zero).rjust(14)+"{:.4e}".format(cons).rjust(14)+" ; "+names_sys[s.S[j]]+" - "+names_sys[near_C]+" m\n")
+            else:
+                print("Unrecognized bond type")
 
 def write_angles(staples_list):
+    #Goes through every staple and wirtes the parameters for the angles involving S atoms. Then a particular case is used for the S-Aul-S bond
     angles = open(workdir_opt + '/angles.top', 'w')
     func_type = str(1)
     for i in range(len(staples_list)):
@@ -249,7 +271,7 @@ def write_angles(staples_list):
         D_S_Au = distance.cdist(xyz_sys[s.S], xyz_sys[s.Au])
         D_S_C = distance.cdist(xyz_sys[s.S], xyz_sys[s.C])
         for j in range(len(s.S)):
-            #Au-S-Au
+            #Au - S - Au angles
             near_Au = s.Au[D_S_Au[j].argsort()[0:2]]
             cons = 460.24
             if ((near_Au[0] in s.Au_l) and (near_Au[1] not in s.Au_l) or (near_Au[0] not in s.Au_l) and (near_Au[1] in s.Au_l)):
@@ -264,15 +286,18 @@ def write_angles(staples_list):
                 print("There is an unsupported Au-S-Au bond")
             angles.write(str(near_Au[0]+1).rjust(6)+str(s.S[j]+1).rjust(7)+str(near_Au[1]+1).rjust(7)+str(func_type).rjust(7)+"{:.4e}".format(zero).rjust(14)+"{:.4e}".format(cons).rjust(14)+" ; "+names_sys[near_Au[0]]+" - "+names_sys[s.S[j]]+" - "+names_sys[near_Au[1]]+" m\n")
 
+            #Au - S - C angles
             near_C = s.C[D_S_C[j].argsort()[0]]
-            cons = 146.37
-            for k in range(len(near_Au)):
-                if near_Au[k] in s.Au_l:
-                    zero = 106.8
-                else:
-                    zero = 111.6
-                angles.write(str(near_Au[k]+1).rjust(6)+str(s.S[j]+1).rjust(7)+str(near_C+1).rjust(7)+str(func_type).rjust(7)+"{:.4e}".format(zero).rjust(14)+"{:.4e}".format(cons).rjust(14)+" ; "+names_sys[near_Au[k]]+" - "+names_sys[s.S[j]]+" - "+names_sys[near_C]+" m\n")
+            if types_sys[near_C] == "CT":
+                cons = 146.37
+                for k in range(len(near_Au)):
+                    if near_Au[k] in s.Au_l:
+                        zero = 106.8
+                    else:
+                        zero = 111.6
+                    angles.write(str(near_Au[k]+1).rjust(6)+str(s.S[j]+1).rjust(7)+str(near_C+1).rjust(7)+str(func_type).rjust(7)+"{:.4e}".format(zero).rjust(14)+"{:.4e}".format(cons).rjust(14)+" ; "+names_sys[near_Au[k]]+" - "+names_sys[s.S[j]]+" - "+names_sys[near_C]+" m\n")
 
+            #S - C - H angles
             D_C_H = distance.cdist([xyz_sys[near_C]], xyz_sys[s.H])
             near_H = s.H[D_C_H[0].argsort()[0:2]]
             cons = 418.40
@@ -283,6 +308,7 @@ def write_angles(staples_list):
                 else:
                     print("There are no parameters for angles involving this kind of hydrogen atoms")
 
+        #Aul - S - Aul angles
         D_Aul_S = distance.cdist(xyz_sys[s.Au_l], xyz_sys[s.S])
         cons = 460.240
         zero = 172.4
@@ -291,7 +317,7 @@ def write_angles(staples_list):
             angles.write(str(near_S[0]+1).rjust(6)+str(s.Au_l[j]+1).rjust(7)+str(near_S[1]+1).rjust(7)+str(func_type).rjust(7)+"{:.4e}".format(zero).rjust(14)+"{:.4e}".format(cons).rjust(14)+" ; "+names_sys[near_S[0]]+" - "+names_sys[s.Au_l[j]]+" - "+names_sys[near_S[1]]+" m\n")
 
 def write_topology():
-
+    #Copies the previous topology file writen by acpype.py and inserts the new bond and angles at the beggining of their respective sections
     top_file = open(NP_top_opt, "r")
     cont_top_file = top_file.readlines()
     top_file.close()
