@@ -165,7 +165,17 @@ def classify_staples(staples_list):
         elif N_S == 2 and N_Au == 3:
             staple_act.change_tipo('STR')
         elif N_S == 3 and N_Au == 4:
-            print("Soon to be implemented")
+            D_S_Aul = distance.cdist(xyz_sys[staple_act.S], xyz_sys[staple_act.Au_l])
+            for j in range (len(staple_act.S)):
+                near_Au = staple_act.S[D_Aul_S[j].argsort()[0:2]]
+                if np.all(np.in1d(near_Au, staple_act.Au_l)):
+                    angle = angle(xyz_sys[near_Au[0]], xyz_sys[staple_act.S[j]], xyz_sys[near_Au[1]]))
+                    if angle <= 109.0 and angle >= 91.0:
+                        staple_act.change_tipo('STC')
+                    elif angle <= 128.2 and angle >= 110.2:
+                        staple_act.change_tipo('STV')
+                    else:
+                        print("Unrecognized staple")
         else:
             print("Unrecognized staple")
     return staples_list
