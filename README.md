@@ -13,3 +13,4 @@ Remarks:
 2. Immediately beneath @<TRIPOS>RESIDUECONNECT the first written thing must be the number of the atom used as anchor.
 3. The output name for the core will always be "AU"
 4. The output name for the stapling atom will always be "ST"
+5. The options in NP_builder.in are case sensitive

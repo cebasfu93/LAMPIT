@@ -171,7 +171,7 @@ def put_staples(shell, radius):
     mins = np.argmin(distances, axis=1)
     for i in range(len(S_atoms)):
         norma=np.linalg.norm(shell[mins[i]])
-        scaling = (norma + (metal_radius[metal_opt]+metal_radius['S'])/2)/norma
+        scaling = (norma + (metal_radius[metal_opt]+metal_radius['S']))/norma
         S_atoms[i,:] = scaling*shell[mins[i]]
     return S_atoms
 

@@ -64,8 +64,9 @@ def check_options(core_fname, ligand_fname1, ligand_fname2):
         sys.exit("Core file could not be found")
     if not (os.path.isfile(ligand_fname1)):
         sys.exit("Ligand file 1 could not be found")
-    if not (os.path.isfile(ligand_fname2)):
-        sys.exit("Ligand file 2 could not be found")
+    if frac_lig1_opt < 1.0:
+        if not (os.path.isfile(ligand_fname2)):
+            sys.exit("Ligand file 2 could not be found")
 
 def change_names(names_core_func):
     #Changes the name of the original atoms in the core for AU, and the staples for ST. This names are required for the rest of LAMPIT
@@ -155,16 +156,26 @@ def get_ligand_pill(xyz_lig_func, anchor_ndx_func):
 check_options(corename_opt, ligand1_opt, ligand2_opt)
 
 xyz_lig1, names_lig1, anchor_ndx1, res_name1 = init_lig_mol2(ligand1_opt)
-xyz_lig2, names_lig2, anchor_ndx2, res_name2 = init_lig_mol2(ligand2_opt)
+if frac_lig1_opt < 1.0:
+    xyz_lig2, names_lig2, anchor_ndx2, res_name2 = init_lig_mol2(ligand2_opt)
+else:
+    xyz_lig2, names_lig2, anchor_ndx2, res_name2 = [], [], [], []
 
 xyz_core, names_core = init_core_pdb(corename_opt)
 
 xyz_pillars1 = get_ligand_pill(xyz_lig1, anchor_ndx1)
-xyz_pillars2 = get_ligand_pill(xyz_lig2, anchor_ndx2)
+if frac_lig1_opt < 1.0:
+    xyz_pillars2 = get_ligand_pill(xyz_lig2, anchor_ndx2)
+else:
+    xyz_pillars2 = []
 
 #Define number of atoms in a ligand, number of staples, and number of stones specified
 N_at_lig1 = len(xyz_lig1[:,0])
-N_at_lig2 = len(xyz_lig2[:,0])
+if frac_lig1_opt < 1.0:
+    N_at_lig2 = len(xyz_lig2[:,0])
+else:
+    N_at_lig2 = 0
+
 N_S = len(names_core[names_core=='ST'])
 
 def assign_morph(xyz_core_func, names_core_func):
@@ -219,14 +230,15 @@ def coat_NP(xyz_core_func, names_core_func, xyz_lig1_func, names_lig1_func, xyz_
         names_coated_func=np.append(names_coated_func, names_lig1_func, axis=0)
 
     #Transforms and appends rototranslated ligand 2
-    xyz_lig2_func_conv=np.insert(xyz_lig2_func, 3, 1, axis=1).T
-    for i in range(len(xyz_stones2_func[:,0,0])):
-        xyz_stones_now = xyz_stones2_func[i,:,:]
-        trans_matrix=affine_matrix_from_points(xyz_pillars2_func.T, xyz_stones_now.T, shear=False, scale=False, usesvd=True)
-        trans_lig=np.dot(trans_matrix, xyz_lig2_func_conv).T[:,:3]
+    if frac_lig1_opt < 1.0:
+        xyz_lig2_func_conv=np.insert(xyz_lig2_func, 3, 1, axis=1).T
+        for i in range(len(xyz_stones2_func[:,0,0])):
+            xyz_stones_now = xyz_stones2_func[i,:,:]
+            trans_matrix=affine_matrix_from_points(xyz_pillars2_func.T, xyz_stones_now.T, shear=False, scale=False, usesvd=True)
+            trans_lig=np.dot(trans_matrix, xyz_lig2_func_conv).T[:,:3]
 
-        xyz_coated_func=np.append(xyz_coated_func, trans_lig, axis=0)
-        names_coated_func=np.append(names_coated_func, names_lig2_func, axis=0)
+            xyz_coated_func=np.append(xyz_coated_func, trans_lig, axis=0)
+            names_coated_func=np.append(names_coated_func, names_lig2_func, axis=0)
     return xyz_coated_func, names_coated_func
 
 def print_NP_pdb(xyz_coated_func, names_coated_func, xyz_anchors1_func, xyz_anchors2_func, out_fname):
@@ -286,7 +298,10 @@ def write_pdb_block(atname_func, res_name_func, xyz_func, resnum, atnum, out_fil
 xyz_anchors1, xyz_anchors2 = assign_morph(xyz_core, names_core)
 
 xyz_stones1 = get_stones(xyz_anchors1, xyz_pillars1)
-xyz_stones2 = get_stones(xyz_anchors2, xyz_pillars2)
+if frac_lig1_opt < 1.0:
+    xyz_stones2 = get_stones(xyz_anchors2, xyz_pillars2)
+else:
+    xyz_stones2 = []
 
 xyz_coated_NP, names_coated_NP = coat_NP(xyz_core, names_core, xyz_lig1, names_lig1, xyz_pillars1, xyz_stones1, xyz_lig2, names_lig2, xyz_pillars2, xyz_stones2)
 

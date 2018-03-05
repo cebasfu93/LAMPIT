@@ -4,29 +4,29 @@
 SYS_NAME="test"  #Prefix used for the generation of files
 CORE_PDB="au144SR60"  #path to the pdb of the NP's core including the first carbon
 
-MOL2_LIG1="LF1" #mol2 file of a linear ligand 1 with the right charges
+MOL2_LIG1="LF2" #mol2 file of a linear ligand 1 with the right charges
 OLD_NAME1="F00"  #Name of the ligand 1 in MOL2_LIG1
-NEW_NAME1="LF1"  #New 3-letter residue name for ligand 1
+NEW_NAME1="LF2"  #New 3-letter residue name for ligand 1
 
-MOL2_LIG2="LF2" #mol2 file of a linear ligand 2 with the right charges
+MOL2_LIG2="LF3" #mol2 file of a linear ligand 2 with the right charges
 OLD_NAME2="F00"  #Name of the ligand 2 in MOL2_LIG1
-NEW_NAME2="LF2"  #New 3-letter residue name for ligand 2
+NEW_NAME2="LF3"  #New 3-letter residue name for ligand 2
+
+FRAC_LIG1="1.0"
 
 CORENAME="Au"  #Name core atom in CORE_PDB
 STAPLENAME="S" #N
 COREANCHOR="C"
 MORPHOLOGY="random"
-FRAC_LIG1="0.7"
 RSEED="666"
 
 F_LEAP1="LeapLig"  #Name of the first tleap input
 F_LEAP2="LeapSys"  #Name of the second tleap input
 F_NPBUILDER="NP_builder"
-F_STAPLES="staples_topology"
+F_STAPLES="staples"
 DEPENDS="/DATA/SoftwareSFU/IN-HOUSE/LAMPIT/DEPENDENCIES/"  #Path of the folder with LAMPIT's dependencies
-ANCHOR_NAME="C1"
-ANCHOR_H="H1,H2"
 
+########################################################################################################################################################################################
 #Creates working directory and copies important files
 mkdir ${SYS_NAME}
 cp ${MOL2_LIG1}.mol2 ${SYS_NAME}/${NEW_NAME1}.mol2
@@ -103,12 +103,12 @@ rm -rf em.mdp md.mdp leap.log ANTECHAMBER.FRCMOD
 
 echo "topfile \t ${SYS_NAME}/${SYS_NAME}.top" > ${SYS_NAME}/${F_STAPLES}.in
 echo "grofile \t ${SYS_NAME}/${SYS_NAME}.gro" >> ${SYS_NAME}/${F_STAPLES}.in
-echo "ligname1 \t ${NEW_NAME1}" >> ${SYS_NAME}/${F_STAPLES}.in
-echo "ligname2 \t ${NEW_NAME2}" >> ${SYS_NAME}/${F_STAPLES}.in
+echo "resname1 ${NEW_NAME1}\t " >> ${SYS_NAME}/${F_STAPLES}.in
+echo "resname2 ${NEW_NAME2}\t " >> ${SYS_NAME}/${F_STAPLES}.in
 echo "ligand1 \t ${SYS_NAME}/${NEW_NAME1}.mol2" >> ${SYS_NAME}/${F_STAPLES}.in
 echo "ligand2 \t ${SYS_NAME}/${NEW_NAME2}.mol2" >> ${SYS_NAME}/${F_STAPLES}.in
 echo "workdir \t ${SYS_NAME}" >> ${SYS_NAME}/${F_STAPLES}.in
 
 
 #Modifies topology file to include bonds and angles involving staple atoms
-#python3.6 ${DEPENDS}/staples_topology.py ${SYS_NAME}/${F_STAPLES}.in
+python3.6 ${DEPENDS}/staples.py ${SYS_NAME}/${F_STAPLES}.in
