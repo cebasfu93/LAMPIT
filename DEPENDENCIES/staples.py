@@ -23,11 +23,11 @@ def load_options(input_file):
     #Reads the input file with the options (case sensitive) and globally change the values of the variables storing them
     for i in range(len(input_file)):
         if "grofile" in input_file[i]:
-            global grofile_opt
-            grofile_opt = input_file[i][1]
+            global NP_gro_opt
+            NP_gro_opt = input_file[i][1]
         if "topfile" in input_file[i]:
-            global topfile_opt
-            topfile_opt = input_file[i][1]
+            global NP_top_opt
+            NP_top_opt = input_file[i][1]
         if "resname1" in input_file[i]:
             global res_name1_opt
             res_name1_opt = input_file[i][1]
