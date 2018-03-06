@@ -96,9 +96,9 @@ def init_lig_mol2(ligand_fname):
             ini = i+1
             found_ATOM = 1
         elif "@<TRIPOS>RESIDUECONNECT" in lig_file[i]:
-            anchor_ndx_func = int(lig_file[i+1].split()[0])-1
+            xyz_lig_func, names_lig_func = np.array(xyz_lig_func, dtype='float'), np.array(names_lig_func)
+            anchor_ndx_func = np.where(names_lig_func==lig_file[i+1].split()[1])[0][0]
 
-    xyz_lig_func, names_lig_func = np.array(xyz_lig_func, dtype='float'), np.array(names_lig_func)
     anchor_pos = np.copy(xyz_lig_func)[anchor_ndx_func,:]
     resid = at_file[7]
     #Moves the ligand so that the anchor is in (0,0,0)

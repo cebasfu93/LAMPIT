@@ -79,12 +79,13 @@ def get_lig_info(lig_mol2):
             found_CONNECT = 1
         elif found_CONNECT == 1:
             xyz = np.array(xyz).astype('float')
-            ndx_C = int(str(line).split()[0])-1
+            names = np.array(names)
+            types = np.array(types)
+            ndx_C = np.where(names == str(line).split()[1])[0][0]
             dists = distance.cdist([xyz[ndx_C]], xyz)
             ndx_Hs = np.argsort(dists[0])[1:3]
             break
-    names = np.array(names)
-    types = np.array(types)
+
     return names[ndx_C], types[ndx_C], names[ndx_Hs], types[ndx_Hs]
 
 def load_gro():
