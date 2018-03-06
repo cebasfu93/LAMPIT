@@ -16,6 +16,7 @@ res_name1_opt = "LF1"
 res_name2_opt = "LF2"
 ligand1_opt = "test/LF1.mol2"
 ligand2_opt = "test/LF2.mol2"
+frac_lig1_opt = 0.5
 workdir_opt = "test"
 
 def load_options(input_file):
@@ -39,6 +40,9 @@ def load_options(input_file):
         if "ligand2" in input_file[i]:
             global ligand2_opt
             ligand2_opt = input_file[i][1]
+        if "frac_lig1" in input_file[i]:
+            global frac_lig1_opt
+            frac_lig1_opt = float(input_file[i][1])
         if "workdir" in input_file[i]:
             global workdir_opt
             workdir_opt = input_file[i][1]
@@ -342,23 +346,30 @@ def write_topology():
                 final_top.writelines(angles_contents[j])
 
 
-name_C1 , type_C1, name_H1, type_H1 = get_lig_info(ligand1_opt)
-name_C2 , type_C2, name_H2, type_H2 = get_lig_info(ligand2_opt)
-
 xyz_sys, names_sys = load_gro()
 types_sys = load_top()
 
 ndx_AU = get_gro_ndx(names_sys, 'AU')
 ndx_ST = get_gro_ndx(names_sys, 'ST')
+
+name_C1, type_C1, name_H1, type_H1 = get_lig_info(ligand1_opt)
+
 ndx_C1 = get_gro_ndx(names_sys, name_C1)
-ndx_C2 = get_gro_ndx(names_sys, name_C2)
 ndx_H1a = get_gro_ndx(names_sys, name_H1[0])
 ndx_H1b = get_gro_ndx(names_sys, name_H1[1])
-ndx_H2a = get_gro_ndx(names_sys, name_H2[0])
-ndx_H2b = get_gro_ndx(names_sys, name_H2[1])
 
-ndx_C = np.unique(np.append(ndx_C1, ndx_C2))
-ndx_H = np.unique(np.append(ndx_H1a, [ndx_H1b, ndx_H2a, ndx_H2b]))
+if frac_lig1_opt < 1.0:
+    name_C2, type_C2, name_H2, type_H2 = get_lig_info(ligand2_opt)
+
+    ndx_C2 = get_gro_ndx(names_sys, name_C2)
+    ndx_H2a = get_gro_ndx(names_sys, name_H2[0])
+    ndx_H2b = get_gro_ndx(names_sys, name_H2[1])
+
+else:
+    name_C2, type_C2, name_H2, type_H2, ndx_C2, ndx_H2a, ndx_H2b = np.array([]), np.array([]), np.array([]), np.array([]), np.array([]), np.array([]), np.array([])
+
+ndx_C = np.unique(np.concatenate((ndx_C1, ndx_C2)).astype('int'))
+ndx_H = np.unique(np.concatenate((ndx_H1a, ndx_H1b, ndx_H2a, ndx_H2b)).astype('int'))
 
 blocks = make_blocks(ndx_AU, ndx_ST, ndx_C, ndx_H)
 staples = make_staples(blocks)

@@ -101,7 +101,6 @@ def init_lig_mol2(ligand_fname):
     xyz_lig_func, names_lig_func = np.array(xyz_lig_func, dtype='float'), np.array(names_lig_func)
     anchor_pos = np.copy(xyz_lig_func)[anchor_ndx_func,:]
     resid = at_file[7]
-    print(resid, ligand_fname)
     #Moves the ligand so that the anchor is in (0,0,0)
     for i in range(len(xyz_lig_func[:,0])):
         xyz_lig_func[i,:] = xyz_lig_func[i,:] - anchor_pos

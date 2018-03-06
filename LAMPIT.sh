@@ -8,17 +8,17 @@ CORENAME="Au"  #Name of the core atom in CORE_PDB
 STAPLENAME="S" #Name of the stapling atom in CORE_PDB
 COREANCHOR="C" #Name of the carbon included in CORE_PDB
 
-MOL2_LIG1="LF2" #mol2 file of a linear ligand 1 with the right charges (without extension)
+MOL2_LIG1="LF1" #mol2 file of a linear ligand 1 with the right charges (without extension)
 OLD_NAME1="F00"  #Name of the ligand 1 in MOL2_LIG1
-NEW_NAME1="LF2"  #New 3-letter residue name for ligand 1
+NEW_NAME1="LF1"  #New 3-letter residue name for ligand 1
 
-FRAC_LIG1="0.5" #Fraction (0-1) of Ligand1 in the coating. If it is set to 1, it will only look for the files of ligand1
+FRAC_LIG1="0.9" #Fraction (0-1) of Ligand1 in the coating. If it is set to 1, it will only look for the files of ligand1
 
-MORPHOLOGY="janus" #Morphology to distribute ligand 1 and 2
+MORPHOLOGY="random" #Morphology to distribute ligand 1 and 2
 RSEED="666" #Random seed used when MORPHOLOGY is set to "random"
-MOL2_LIG2="LF3" #mol2 file of a linear ligand 2 with the right charges
+MOL2_LIG2="LF2" #mol2 file of a linear ligand 2 with the right charges
 OLD_NAME2="F00"  #Name of the ligand 2 in MOL2_LIG1
-NEW_NAME2="LF3"  #New 3-letter residue name for ligand 2
+NEW_NAME2="LF2"  #New 3-letter residue name for ligand 2
 
 F_LEAP1="LeapLig"  #Name of the first tleap input
 F_LEAP2="LeapSys"  #Name of the second tleap input
@@ -107,6 +107,7 @@ echo "resname1 ${NEW_NAME1}\t " >> ${SYS_NAME}/${F_STAPLES}.in
 echo "resname2 ${NEW_NAME2}\t " >> ${SYS_NAME}/${F_STAPLES}.in
 echo "ligand1 \t ${SYS_NAME}/${NEW_NAME1}.mol2" >> ${SYS_NAME}/${F_STAPLES}.in
 echo "ligand2 \t ${SYS_NAME}/${NEW_NAME2}.mol2" >> ${SYS_NAME}/${F_STAPLES}.in
+echo "frac_lig1 \t ${FRAC_LIG1}" >> ${SYS_NAME}/${F_STAPLES}.in
 echo "workdir \t ${SYS_NAME}" >> ${SYS_NAME}/${F_STAPLES}.in
 
 #Modifies topology file to include bonds and angles involving staple atoms
