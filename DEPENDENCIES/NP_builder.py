@@ -6,6 +6,7 @@ import sys
 from  transformations import *
 import random
 from scipy.spatial import distance
+from sklearn.decomposition import PCA
 
 #Imports input file with options
 inp=np.genfromtxt(sys.argv[1], dtype="str")
@@ -137,11 +138,13 @@ def init_core_pdb(core_fname):
 
 def get_ligand_pill(xyz_lig_func, anchor_ndx_func):
     #Runs a PCA and takes the first eigenvector as the best fitting line.
-    pca = np.linalg.eig(np.cov(xyz_lig_func.T))
-    pca1 = pca[1][0]
-    var1 = pca[0][0]/np.sum(pca[0])*100
-    print("PCA1 explains: {:.1f}% of the points' variance".format(var1))
+    pca = PCA(n_components=3)
+    pca.fit(xyz_lig_func)
+    pca1 = pca.components_[0]
+    var1 = pca.explained_variance_[0]/np.sum(pca.explained_variance_)*100
 
+    print("PCA1 explains: {:.1f}% of the points' variance".format(var1))
+    
     #Randomly takes 2 other atoms in the ligand and project their positions in PCA1
     random.seed(666)
     rango = list(range(len(xyz_lig_func[:,0])))
